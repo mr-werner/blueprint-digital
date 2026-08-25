@@ -68,49 +68,6 @@ const Icon = ({ name }) => {
   );
 };
 
-const serviceGroups = [
-  {
-    category: "The Foundation",
-    items: [
-      ["Website Hosting", true, true, true, true],
-      ["Business Email Integration", true, true, true, true],
-      ["HTTPS / SSL", true, true, true, true],
-    ],
-  },
-  {
-    category: "Better Technology",
-    items: [
-      ["High-Speed Performance", false, true, true, true],
-      ["Reliable Cloud Hosting", false, true, true, true],
-      ["AI-Assisted Optimization", false, true, true, true],
-    ],
-  },
-  {
-    category: "Protection & Care",
-    items: [
-      ["Security & Bot Protection", false, false, true, true],
-      ["Ongoing Maintenance", false, false, true, true],
-      ["Website Monitoring", false, false, true, true],
-    ],
-  },
-  {
-    category: "Growth & Visibility",
-    items: [
-      ["Google Search Monitoring", false, false, false, true],
-      ["Search Engine Optimization", false, false, false, true],
-      ["Analytics & Growth Insights", false, false, false, true],
-    ],
-  },
-];
-
-function Status({ included }) {
-  return (
-    <span className={included ? "included" : "excluded"}>
-      {included ? "✓" : "—"}
-    </span>
-  );
-}
-
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -120,20 +77,31 @@ export default function App() {
     const form = new FormData(event.currentTarget);
 
     const name = form.get("name");
+    const companyName = form.get("companyName");
     const email = form.get("email");
-    const company = form.get("company");
-    const message = form.get("message");
+    const phone = form.get("phone");
+    const companyType = form.get("companyType");
+    const budget = form.get("budget");
+    const project = form.get("project");
 
     const subject = encodeURIComponent(
       `Blueprint WebStudio inquiry from ${name}`
     );
 
     const body = encodeURIComponent(
-      `Name: ${name}\nEmail: ${email}\nCompany: ${company || "Not provided"
-      }\n\nProject Details:\n${message}`
+      `Name: ${name}
+Company: ${companyName}
+Email: ${email}
+Phone: ${phone || "Not provided"}
+Company Type: ${companyType}
+Budget: ${budget}
+
+Project Details:
+${project}`
     );
 
-    window.location.href = `mailto:hello@blueprintwebstudio.com?subject=${subject}&body=${body}`;
+    window.location.href =
+      `mailto:hello@blueprintwebstudio.com?subject=${subject}&body=${body}`;
   }
 
   return (
@@ -295,143 +263,293 @@ export default function App() {
           </div>
         </section>
 
-        <section id="deals" className="deals-section page-section">
-          <div className="deals-intro">
-            <p className="section-kicker">Special Programs</p>
-
-            <h2>
-              Built for Your
-              <br />
-              Business Goals
-            </h2>
-
-            <p>
-              Choose the service level that fits your business, then see whether
-              you qualify for one of our special programs designed to make
-              premium web development more attainable.
-            </p>
-          </div>
-
-          <article className="deal-card small-business-card">
-            <div className="deal-icon deal-icon-green">
-              <Icon name="store" />
-            </div>
-
-            <div>
-              <span className="deal-number">50% OFF</span>
-              <h3>Small Business Program</h3>
-
-              <p>
-                For qualifying established independent businesses ready to
-                improve their digital presence.
-              </p>
-
-              <a href="#contact">
-                Learn More
-                <Icon name="arrow" />
-              </a>
-            </div>
-          </article>
-
-          <article className="deal-card startup-card">
-            <div className="deal-icon deal-icon-blue">
-              <Icon name="rocket" />
-            </div>
-
-            <div>
-              <span className="deal-number">75% OFF</span>
-              <h3>Startup Program</h3>
-
-              <p>
-                For qualifying independent startups building their brand and
-                launching their first professional website.
-              </p>
-
-              <a href="#contact">
-                Learn More
-                <Icon name="arrow" />
-              </a>
-            </div>
-          </article>
-        </section>
-
-        <section id="services" className="services-section page-section">
+<section id="services" className="services-section page-section">
           <div className="section-heading">
             <div>
               <p className="section-kicker">Services</p>
+
               <h2>
-                More than
+                Built around
                 <br />
-                just a website.
+                your business.
               </h2>
             </div>
 
             <p>
-              Choose the level of technology, protection, support, and
-              visibility that fits your business.
+              Every Blueprint website is custom designed, professionally developed,
+              and built to support your business long after launch.
             </p>
           </div>
 
-          <div className="comparison-scroll">
-            <div className="comparison-table">
-              <div className="comparison-head feature-head">
-                What You Get
-              </div>
+          <div className="service-plans">
+            {/* FOUNDATION */}
+            <article className="service-plan">
+              <div className="service-plan-top">
+                <span className="service-number">01</span>
 
-              <div className="comparison-head muted-plan">
-                <span>Typical</span>
-                <strong>Others</strong>
-              </div>
-
-              <div className="comparison-head">
-                <span>Blueprint</span>
-                <strong>Basic</strong>
-              </div>
-
-              <div className="comparison-head highlighted-plan">
-                <small>Most Popular</small>
-                <span>Blueprint</span>
-                <strong>Standard</strong>
-              </div>
-
-              <div className="comparison-head">
-                <span>Blueprint</span>
-                <strong>Premium</strong>
-              </div>
-
-              {serviceGroups.map((group) => (
-                <div className="comparison-group" key={group.category}>
-                  <div className="comparison-category">{group.category}</div>
-
-                  {group.items.map(
-                    ([name, others, basic, standard, premium]) => (
-                      <div className="comparison-row" key={name}>
-                        <div className="comparison-name">{name}</div>
-
-                        <div className="comparison-cell">
-                          <Status included={others} />
-                        </div>
-
-                        <div className="comparison-cell">
-                          <Status included={basic} />
-                        </div>
-
-                        <div className="comparison-cell standard-cell">
-                          <Status included={standard} />
-                        </div>
-
-                        <div className="comparison-cell">
-                          <Status included={premium} />
-                        </div>
-                      </div>
-                    )
-                  )}
+                <div>
+                  <span className="service-label">Blueprint</span>
+                  <h3>Foundation</h3>
                 </div>
-              ))}
+              </div>
+
+              <div className="service-price">
+                <span>Starting at</span>
+                <strong>$6,000</strong>
+              </div>
+
+              <p className="service-description">
+                For businesses that need a polished, professional website built on a
+                strong digital foundation.
+              </p>
+
+              <ul className="service-list">
+                <li>Custom Website Design</li>
+                <li>Responsive Development</li>
+                <li>High-Speed Performance</li>
+                <li>Professional Cloud Hosting</li>
+                <li>HTTPS / SSL Security</li>
+                <li>Contact & Lead Generation</li>
+                <li>Foundational SEO</li>
+                <li>Google Analytics Integration</li>
+                <li>Launch & Deployment</li>
+              </ul>
+
+              <a href="#contact" className="service-link">
+                Start a Foundation Project
+                <Icon name="arrow" />
+              </a>
+            </article>
+
+            {/* BUSINESS */}
+            <article className="service-plan service-plan-featured">
+              <span className="service-popular">Most Popular</span>
+
+              <div className="service-plan-top">
+                <span className="service-number">02</span>
+
+                <div>
+                  <span className="service-label">Blueprint</span>
+                  <h3>Business</h3>
+                </div>
+              </div>
+
+              <div className="service-price">
+                <span>Starting at</span>
+                <strong>$10,000</strong>
+              </div>
+
+              <p className="service-description">
+                For established businesses where the website plays an important role
+                in attracting, converting, and serving customers.
+              </p>
+
+              <ul className="service-list">
+                <li>Everything in Foundation</li>
+                <li>Expanded Pages & Content</li>
+                <li>Advanced Lead Generation</li>
+                <li>Custom Forms & Integrations</li>
+                <li>Google Search Monitoring</li>
+                <li>Enhanced SEO</li>
+                <li>Conversion Tracking</li>
+                <li>Content Migration</li>
+                <li>Advanced Animations & Interactions</li>
+              </ul>
+
+              <a href="#contact" className="service-link">
+                Start a Business Project
+                <Icon name="arrow" />
+              </a>
+            </article>
+
+            {/* PREMIUM */}
+            <article className="service-plan">
+              <div className="service-plan-top">
+                <span className="service-number">03</span>
+
+                <div>
+                  <span className="service-label">Blueprint</span>
+                  <h3>Premium</h3>
+                </div>
+              </div>
+
+              <div className="service-price">
+                <span>Starting at</span>
+                <strong>$15,000+</strong>
+              </div>
+
+              <p className="service-description">
+                For organizations that need a larger website, sophisticated features,
+                or a more customized digital platform.
+              </p>
+
+              <ul className="service-list">
+                <li>Everything in Business</li>
+                <li>Advanced Custom Development</li>
+                <li>Third-Party Integrations</li>
+                <li>Complex Forms & Workflows</li>
+                <li>Advanced SEO Architecture</li>
+                <li>Custom Analytics Dashboards</li>
+                <li>Multiple Locations or Service Areas</li>
+                <li>Expanded Content Architecture</li>
+                <li>Custom Project Requirements</li>
+              </ul>
+
+              <a href="#contact" className="service-link">
+                Discuss a Premium Project
+                <Icon name="arrow" />
+              </a>
+            </article>
+          </div>
+
+          {/* WEBSITE MANAGEMENT */}
+          <div className="management-card">
+            <div className="management-heading">
+              <div>
+                <p className="section-kicker">Website Management</p>
+
+                <h3>
+                  Launch isn't
+                  <br />
+                  the finish line.
+                </h3>
+              </div>
+
+              <div className="management-price">
+                <span>Starting at</span>
+                <strong>$299</strong>
+                <small>/ month</small>
+              </div>
+            </div>
+
+            <div className="management-content">
+              <p>
+                Blueprint can continue managing the technical side of your website so
+                your business doesn't have to.
+              </p>
+
+              <div className="management-features">
+                <span>Hosting</span>
+                <span>Security Monitoring</span>
+                <span>Uptime Monitoring</span>
+                <span>Website Maintenance</span>
+                <span>Form Monitoring</span>
+                <span>Analytics</span>
+                <span>Minor Content Updates</span>
+                <span>Technical Support</span>
+                <span>Ongoing Optimization</span>
+              </div>
+
+              <a href="#contact" className="service-link">
+                Ask About Website Management
+                <Icon name="arrow" />
+              </a>
             </div>
           </div>
         </section>
 
+        <section id="partner" className="partner-section page-section">
+          <div className="section-heading">
+            <div>
+              <p className="section-kicker">Partner Program</p>
+
+              <h2>
+                Built for businesses
+                <br />
+                worth betting on.
+              </h2>
+            </div>
+
+            <p>
+              Blueprint reserves a limited number of projects each year for
+              independent businesses and early-stage companies that could benefit from
+              reduced project pricing.
+            </p>
+          </div>
+
+          <div className="partner-grid">
+            {/* SMALL BUSINESS */}
+            <article className="partner-card">
+              <div className="partner-card-top">
+                <span className="partner-number">01</span>
+
+                <div>
+                  <span className="partner-label">Partner Program</span>
+                  <h3>Small Business</h3>
+                </div>
+              </div>
+
+              <p className="partner-description">
+                For independent businesses investing in a stronger digital presence
+                while balancing the realities of operating a growing company.
+              </p>
+
+              <div className="partner-highlight">
+                <span>Reduced project pricing</span>
+                <strong>Available</strong>
+              </div>
+
+              <ul className="partner-list">
+                <li>Custom Blueprint website</li>
+                <li>Same professional development standards</li>
+                <li>Flexible project scope</li>
+                <li>Ongoing management options</li>
+                <li>Limited availability</li>
+              </ul>
+
+              <a href="#contact" className="service-link">
+                Ask About Small Business Pricing
+                <Icon name="arrow" />
+              </a>
+            </article>
+
+            {/* STARTUP */}
+            <article className="partner-card partner-card-featured">
+              <span className="partner-badge">Limited Availability</span>
+
+              <div className="partner-card-top">
+                <span className="partner-number">02</span>
+
+                <div>
+                  <span className="partner-label">Partner Program</span>
+                  <h3>Independent Startup</h3>
+                </div>
+              </div>
+
+              <p className="partner-description">
+                For early-stage companies with a strong idea, clear direction, and a
+                need for professional web development before they have a full-size
+                marketing budget.
+              </p>
+
+              <div className="partner-highlight">
+                <span>Preferred project rates</span>
+                <strong>By Application</strong>
+              </div>
+
+              <ul className="partner-list">
+                <li>Professional custom website</li>
+                <li>Launch-ready digital foundation</li>
+                <li>Scalable development approach</li>
+                <li>Website management available</li>
+                <li>Selected projects only</li>
+              </ul>
+
+              <a href="#contact" className="service-link">
+                Apply for Startup Pricing
+                <Icon name="arrow" />
+              </a>
+            </article>
+          </div>
+
+          <div className="partner-note">
+            <p>
+              Partner pricing is based on project scope, business stage, and
+              availability. Reduced rates do not change Blueprint&apos;s development,
+              performance, or quality standards.
+            </p>
+          </div>
+        </section>
 
         <section id="process" className="process-section">
           <div className="process-heading">
@@ -544,8 +662,12 @@ export default function App() {
             <div className="contact-direct">
               <span>Prefer email?</span>
 
-              <a href="mailto:hello@blueprintwebstudio.com">
-                hello@blueprintwebstudio.com
+              <a
+                href="mailto:hello@blueprintwebstudio.com"
+                className="contact-email"
+              >
+                <span className="contact-email-mark" aria-hidden="true" />
+                <span>hello@blueprintwebstudio.com</span>
               </a>
             </div>
 
@@ -585,56 +707,141 @@ export default function App() {
           </div>
 
           <form className="contact-form" onSubmit={handleSubmit}>
-            <div className="field-row">
-              <label>
-                <span>Name *</span>
+            {/* NAME + COMPANY NAME */}
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="name">Name <span>*</span></label>
+
                 <input
                   type="text"
+                  id="name"
                   name="name"
                   placeholder="Your name"
                   required
                 />
-              </label>
+              </div>
 
-              <label>
-                <span>Email *</span>
+              <div className="form-group">
+                <label htmlFor="companyName">Company Name <span>*</span></label>
+
+                <input
+                  type="text"
+                  id="companyName"
+                  name="companyName"
+                  placeholder="Your company"
+                  required
+                />
+              </div>
+            </div>
+
+            {/* EMAIL + PHONE */}
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="email">Email <span>*</span></label>
+
                 <input
                   type="email"
+                  id="email"
                   name="email"
                   placeholder="you@company.com"
                   required
                 />
-              </label>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="phone">Phone Number</label>
+
+                <input
+                  type="tel"
+                  id="phone"
+                  name="phone"
+                  placeholder="(555) 555-5555"
+                />
+              </div>
             </div>
 
-            <label>
-              <span>Company</span>
-              <input
-                type="text"
-                name="company"
-                placeholder="Business or company name"
-              />
-            </label>
+            {/* COMPANY TYPE + BUDGET */}
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="companyType">Company Type <span>*</span></label>
 
-            <label>
-              <span>What can we help you build? *</span>
+                <select
+                  id="companyType"
+                  name="companyType"
+                  required
+                  defaultValue=""
+                >
+                  <option value="" disabled>
+                    Select company type
+                  </option>
+
+                  <option value="Established Company">
+                    Established Company
+                  </option>
+
+                  <option value="Small Business">
+                    Small Business
+                  </option>
+
+                  <option value="Startup">
+                    Startup
+                  </option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="budget">Budget Range <span>*</span></label>
+
+                <select
+                  id="budget"
+                  name="budget"
+                  required
+                  defaultValue=""
+                >
+                  <option value="" disabled>
+                    Select budget range
+                  </option>
+
+                  <option value="Under $5,000 — Partner Program">
+                    Under $5,000 — Partner Program
+                  </option>
+
+                  <option value="$5,000 – $10,000">
+                    $5,000 – $10,000
+                  </option>
+
+                  <option value="$10,000 – $15,000">
+                    $10,000 – $15,000
+                  </option>
+
+                  <option value="$15,000 – $25,000">
+                    $15,000 – $25,000
+                  </option>
+
+                  <option value="$25,000+">
+                    $25,000+
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            {/* PROJECT */}
+            <div className="form-group">
+              <label htmlFor="project">What can we help you build? <span>*</span></label>
+
               <textarea
-                name="message"
-                rows="7"
-                placeholder="Tell us a little about your project..."
+                id="project"
+                name="project"
+                rows="6"
+                placeholder="Tell us about your business, what you need, and what you'd like the website to accomplish."
                 required
               />
-            </label>
+            </div>
 
             <button type="submit" className="button button-primary form-button">
-              Send Project Inquiry
+              Start a Project
               <Icon name="arrow" />
             </button>
-
-            <small>
-              This currently opens your email application. We can connect the
-              form directly to Resend later.
-            </small>
           </form>
         </section>
       </main>
@@ -678,6 +885,7 @@ export default function App() {
             <a href="#services">Website Management</a>
             <a href="#services">Security & Monitoring</a>
             <a href="#services">Branding & Design</a>
+            <a href="#partner">Partner Program</a>
           </div>
 
           <div className="footer-column">
