@@ -18,8 +18,15 @@ export default async function handler(req, res) {
             companyType,
             budget,
             project,
+            website,
             turnstileToken,
         } = req.body;
+
+        if (website) {
+            return res.status(200).json({
+                success: true,
+            });
+        }
 
         if (
             !name ||

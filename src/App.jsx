@@ -115,11 +115,11 @@ export default function App() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    
+
     if (!turnstileToken) {
-  alert("Please complete the security check before submitting.");
-  return;
-}
+      alert("Please complete the security check before submitting.");
+      return;
+    }
 
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
@@ -132,6 +132,7 @@ export default function App() {
       companyType: form.get("companyType"),
       budget: form.get("budget"),
       project: form.get("project"),
+      website: form.get("website"),
       turnstileToken,
     };
 
@@ -763,6 +764,27 @@ export default function App() {
           </div>
 
           <form className="contact-form" onSubmit={handleSubmit}>
+
+            <div
+              style={{
+                position: "absolute",
+                left: "-9999px",
+                width: "1px",
+                height: "1px",
+                overflow: "hidden",
+              }}
+              aria-hidden="true"
+            >
+              <label htmlFor="website">Website</label>
+              <input
+                type="text"
+                id="website"
+                name="website"
+                tabIndex="-1"
+                autoComplete="off"
+              />
+            </div>
+
             {/* NAME + COMPANY NAME */}
             <div className="form-row">
               <div className="form-group">
