@@ -13,6 +13,7 @@
     "@tailwindcss/vite": "^4.3.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
+    "resend": "^6.24.0",
     "tailwindcss": "^4.3.0"
   },
   "devDependencies": {

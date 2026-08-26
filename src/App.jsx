@@ -71,37 +71,47 @@ const Icon = ({ name }) => {
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  function handleSubmit(event) {
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
 
-    const name = form.get("name");
-    const companyName = form.get("companyName");
-    const email = form.get("email");
-    const phone = form.get("phone");
-    const companyType = form.get("companyType");
-    const budget = form.get("budget");
-    const project = form.get("project");
+    const formData = {
+      name: form.get("name"),
+      companyName: form.get("companyName"),
+      email: form.get("email"),
+      phone: form.get("phone"),
+      companyType: form.get("companyType"),
+      budget: form.get("budget"),
+      project: form.get("project"),
+    };
 
-    const subject = encodeURIComponent(
-      `Blueprint WebStudio inquiry from ${name}`
-    );
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
 
-    const body = encodeURIComponent(
-      `Name: ${name}
-Company: ${companyName}
-Email: ${email}
-Phone: ${phone || "Not provided"}
-Company Type: ${companyType}
-Budget: ${budget}
+      const data = await response.json();
 
-Project Details:
-${project}`
-    );
+      if (!response.ok) {
+        throw new Error(data.error || "Unable to submit form.");
+      }
 
-    window.location.href =
-      `mailto:hello@blueprintwebstudio.com?subject=${subject}&body=${body}`;
+      alert("Thank you! Your project inquiry has been sent.");
+
+      formElement.reset();
+    } catch (error) {
+      console.error("Form submission error:", error);
+
+      alert(
+        "We couldn't send your message. Please email hello@blueprintwebstudio.com directly."
+      );
+    }
   }
 
   return (
