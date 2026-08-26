@@ -50,7 +50,7 @@ export default async function handler(req, res) {
         );
 
         const turnstileResult = await turnstileResponse.json();
-        console.log("Turnstile verification:", turnstileResult);
+        //console.log("Turnstile verification:", turnstileResult);
 
         if (!turnstileResult.success) {
             console.error("Turnstile verification failed:", turnstileResult);
