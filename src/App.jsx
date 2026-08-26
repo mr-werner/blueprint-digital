@@ -1,4 +1,45 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+const [turnstileToken, setTurnstileToken] = useState("");
+const turnstileRef = useRef(null);
+
+useEffect(() => {
+  const script = document.createElement("script");
+
+  script.src =
+    "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+  script.async = true;
+  script.defer = true;
+
+  script.onload = () => {
+    if (window.turnstile && turnstileRef.current) {
+      window.turnstile.render(turnstileRef.current, {
+        sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
+        theme: "auto",
+        size: "flexible",
+        appearance: "interaction-only",
+
+        callback: (token) => {
+          setTurnstileToken(token);
+        },
+
+        "expired-callback": () => {
+          setTurnstileToken("");
+        },
+
+        "error-callback": () => {
+          setTurnstileToken("");
+        },
+      });
+    }
+  };
+
+  document.body.appendChild(script);
+
+  return () => {
+    script.remove();
+  };
+}, []);
 
 const Icon = ({ name }) => {
   const paths = {
@@ -844,6 +885,10 @@ export default function App() {
                 placeholder="Tell us about your business, what you need, and what you'd like the website to accomplish."
                 required
               />
+            </div>
+
+            <div className="turnstile-wrapper">
+              <div ref={turnstileRef}></div>
             </div>
 
             <button type="submit" className="button button-primary form-button">
