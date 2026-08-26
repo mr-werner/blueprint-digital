@@ -263,7 +263,7 @@ ${project}`
           </div>
         </section>
 
-<section id="services" className="services-section page-section">
+        <section id="services" className="services-section page-section">
           <div className="section-heading">
             <div>
               <p className="section-kicker">Services</p>
@@ -660,7 +660,7 @@ ${project}`
             </p>
 
             <div className="contact-direct">
-              <span>Prefer email?</span>
+              <span>Prefer E-mail?</span>
 
               <a
                 href="mailto:hello@blueprintwebstudio.com"
@@ -671,38 +671,36 @@ ${project}`
               </a>
             </div>
 
-            <div className="socials">
-              <a
-                href="#"
-                aria-label="Facebook"
-                onClick={(event) => event.preventDefault()}
-              >
-                f
-              </a>
+            <div className="contact-direct">
+              <span>Prefer a Call?</span>
 
               <a
-                href="#"
+                href="tel:+17205156647"
+                className="contact-email"
+              >
+                <span className="contact-email-mark" aria-hidden="true" />
+                <span>(720) 515-6647</span>
+              </a>
+            </div>
+
+            <div className="socials">
+              <a
+                href="https://www.instagram.com/blueprint_webstudio/"
                 aria-label="Instagram"
-                onClick={(event) => event.preventDefault()}
+
               >
                 ◎
               </a>
 
               <a
-                href="#"
+                href="https://www.linkedin.com/company/143573923/"
                 aria-label="LinkedIn"
-                onClick={(event) => event.preventDefault()}
+                target="_blank"
+                rel="noopener noreferrer"
               >
                 in
               </a>
 
-              <a
-                href="#"
-                aria-label="YouTube"
-                onClick={(event) => event.preventDefault()}
-              >
-                ▶
-              </a>
             </div>
           </div>
 
@@ -863,18 +861,18 @@ ${project}`
             </p>
 
             <div className="footer-socials">
-              <a href="#" onClick={(e) => e.preventDefault()}>
-                f
-              </a>
-              <a href="#" onClick={(e) => e.preventDefault()}>
+              <a href="https://www.instagram.com/blueprint_webstudio/">
                 ◎
               </a>
-              <a href="#" onClick={(e) => e.preventDefault()}>
+              <a
+                href="https://www.linkedin.com/company/143573923/"
+                aria-label="LinkedIn"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 in
               </a>
-              <a href="#" onClick={(e) => e.preventDefault()}>
-                ▶
-              </a>
+
             </div>
           </div>
 
