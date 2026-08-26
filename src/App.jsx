@@ -88,8 +88,8 @@ export default function App() {
           sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
           theme: "auto",
           size: "flexible",
-          // appearance: "interaction-only",
-          appearance: "always",
+          appearance: "interaction-only",
+          // appearance: "always",
 
           callback: (token) => {
             setTurnstileToken(token);

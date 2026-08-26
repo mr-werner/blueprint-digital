@@ -3,46 +3,72 @@ import { Resend } from "resend";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({
-      error: "Method not allowed",
-    });
-  }
-
-  try {
-    const {
-      name,
-      companyName,
-      email,
-      phone,
-      companyType,
-      budget,
-      project,
-    } = req.body;
-
-    if (
-      !name ||
-      !companyName ||
-      !email ||
-      !companyType ||
-      !budget ||
-      !project
-    ) {
-      return res.status(400).json({
-        error: "Please complete all required fields.",
-      });
+    if (req.method !== "POST") {
+        return res.status(405).json({
+            error: "Method not allowed",
+        });
     }
 
-    const { data, error } = await resend.emails.send({
-      from: "Blueprint WebStudio <website@blueprintwebstudio.com>",
+    try {
+        const {
+            name,
+            companyName,
+            email,
+            phone,
+            companyType,
+            budget,
+            project,
+            turnstileToken,
+        } = req.body;
 
-      to: ["hello@blueprintwebstudio.com"],
+        if (
+            !name ||
+            !companyName ||
+            !email ||
+            !companyType ||
+            !budget ||
+            !project ||
+            !turnstileToken
+        ) {
+            return res.status(400).json({
+                error: "Please complete all required fields.",
+            });
+        }
 
-      replyTo: email,
+        const turnstileResponse = await fetch(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: new URLSearchParams({
+                    secret: process.env.TURNSTILE_SECRET_KEY,
+                    response: turnstileToken,
+                }),
+            }
+        );
 
-      subject: `New Blueprint WebStudio inquiry — ${companyName}`,
+        const turnstileResult = await turnstileResponse.json();
 
-      html: `
+        if (!turnstileResult.success) {
+            console.error("Turnstile verification failed:", turnstileResult);
+
+            return res.status(403).json({
+                error: "Security verification failed. Please try again.",
+            });
+        }
+
+        const { data, error } = await resend.emails.send({
+            from: "Blueprint WebStudio <website@blueprintwebstudio.com>",
+
+            to: ["hello@blueprintwebstudio.com"],
+
+            replyTo: email,
+
+            subject: `New Blueprint WebStudio inquiry — ${companyName}`,
+
+            html: `
         <div style="font-family: Arial, sans-serif; max-width: 650px; margin: auto;">
           
           <h2>New Website Inquiry</h2>
@@ -91,25 +117,25 @@ export default async function handler(req, res) {
 
         </div>
       `,
-    });
+        });
 
-    if (error) {
-      console.error("Resend error:", error);
+        if (error) {
+            console.error("Resend error:", error);
 
-      return res.status(500).json({
-        error: "Unable to send email.",
-      });
+            return res.status(500).json({
+                error: "Unable to send email.",
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            data,
+        });
+    } catch (error) {
+        console.error("Contact form error:", error);
+
+        return res.status(500).json({
+            error: "Something went wrong.",
+        });
     }
-
-    return res.status(200).json({
-      success: true,
-      data,
-    });
-  } catch (error) {
-    console.error("Contact form error:", error);
-
-    return res.status(500).json({
-      error: "Something went wrong.",
-    });
-  }
 }
