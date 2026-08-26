@@ -88,7 +88,8 @@ export default function App() {
           sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
           theme: "auto",
           size: "flexible",
-          appearance: "interaction-only",
+          // appearance: "interaction-only",
+          appearance: "always",
 
           callback: (token) => {
             setTurnstileToken(token);
@@ -114,11 +115,11 @@ export default function App() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-
+    
     if (!turnstileToken) {
-      alert("Please complete the security check before submitting.");
-      return;
-    }
+  alert("Please complete the security check before submitting.");
+  return;
+}
 
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
