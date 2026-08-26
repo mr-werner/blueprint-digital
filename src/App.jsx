@@ -1,46 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 
-const [turnstileToken, setTurnstileToken] = useState("");
-const turnstileRef = useRef(null);
-
-useEffect(() => {
-  const script = document.createElement("script");
-
-  script.src =
-    "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-  script.async = true;
-  script.defer = true;
-
-  script.onload = () => {
-    if (window.turnstile && turnstileRef.current) {
-      window.turnstile.render(turnstileRef.current, {
-        sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
-        theme: "auto",
-        size: "flexible",
-        appearance: "interaction-only",
-
-        callback: (token) => {
-          setTurnstileToken(token);
-        },
-
-        "expired-callback": () => {
-          setTurnstileToken("");
-        },
-
-        "error-callback": () => {
-          setTurnstileToken("");
-        },
-      });
-    }
-  };
-
-  document.body.appendChild(script);
-
-  return () => {
-    script.remove();
-  };
-}, []);
-
 const Icon = ({ name }) => {
   const paths = {
     speed: (
@@ -112,8 +71,54 @@ const Icon = ({ name }) => {
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  const [turnstileToken, setTurnstileToken] = useState("");
+  const turnstileRef = useRef(null);
+
+  useEffect(() => {
+    const script = document.createElement("script");
+
+    script.src =
+      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+    script.async = true;
+    script.defer = true;
+
+    script.onload = () => {
+      if (window.turnstile && turnstileRef.current) {
+        window.turnstile.render(turnstileRef.current, {
+          sitekey: import.meta.env.VITE_TURNSTILE_SITE_KEY,
+          theme: "auto",
+          size: "flexible",
+          appearance: "interaction-only",
+
+          callback: (token) => {
+            setTurnstileToken(token);
+          },
+
+          "expired-callback": () => {
+            setTurnstileToken("");
+          },
+
+          "error-callback": () => {
+            setTurnstileToken("");
+          },
+        });
+      }
+    };
+
+    document.body.appendChild(script);
+
+    return () => {
+      script.remove();
+    };
+  }, []);
+
   async function handleSubmit(event) {
     event.preventDefault();
+
+    if (!turnstileToken) {
+      alert("Please complete the security check before submitting.");
+      return;
+    }
 
     const formElement = event.currentTarget;
     const form = new FormData(formElement);
@@ -126,6 +131,7 @@ export default function App() {
       companyType: form.get("companyType"),
       budget: form.get("budget"),
       project: form.get("project"),
+      turnstileToken,
     };
 
     try {
