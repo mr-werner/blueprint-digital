@@ -250,7 +250,7 @@ export default function App() {
             <p className="hero-description">
               We design and build high-performance websites that look
               exceptional, communicate clearly, and turn visitors into
-              customers.
+              customers. Based in Colorado, serving businesses nationwide.
             </p>
 
             <div className="hero-actions">
@@ -685,10 +685,12 @@ export default function App() {
             </h2>
 
             <p>
-              Blueprint WebStudio approaches websites as engineered business
-              tools. Every project combines deliberate structure, strong
-              visual design, modern development, performance, and a clear
-              customer path.
+              <p>
+                Blueprint WebStudio is a Colorado-based web design and development
+                company that approaches websites as engineered business tools.
+                Every project combines deliberate structure, strong visual design,
+                modern development, performance, and a clear customer path.
+              </p>
             </p>
 
             <p>
@@ -941,7 +943,9 @@ export default function App() {
             <p>
               Custom websites engineered for business success.
               <br />
-              Design. Develop. Grow.
+              Design - Develop - Grow
+              <br />
+              Based in Colorado. Built for businesses nationwide.
             </p>
 
             <div className="footer-socials">
