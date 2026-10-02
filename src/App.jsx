@@ -430,21 +430,22 @@ export default function App() {
 
 
 
-          <button
-          type="button"
-          className="demo-code-link"
-          onClick={() => {
-            setDemoError("");
-            setDemoModalOpen(true);
-          }}
-        >
-          <Icon name="key" />
-          <span>Already Have a Demo Code?</span>
-        </button>
+          <div className="header-cta-group">
+          <a href="#contact" className="nav-button">
+            Start Your Project
+          </a>
 
-        <a href="#contact" className="nav-button">
-          Start Your Project
-        </a>
+          <button
+            type="button"
+            className="demo-code-link"
+            onClick={() => {
+              setDemoError("");
+              setDemoModalOpen(true);
+            }}
+          >
+            Already have a demo code?
+          </button>
+        </div>
 
         </nav>
 

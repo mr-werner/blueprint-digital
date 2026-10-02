@@ -4199,57 +4199,42 @@ background 0.2s ease;
    DEMO CODE + MODAL — FINAL OVERRIDES
 ======================================== */
 
+.header-cta-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.header-cta-group .nav-button {
+  width: 100%;
+  text-align: center;
+}
+
 button.demo-code-link {
   appearance: none;
   -webkit-appearance: none;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-
-  min-height: 38px;
-  padding: 0 13px;
+  display: inline-block;
   margin: 0;
-
-  color: #31506f;
-  background: #f4f8fd;
-
-  border: 1px solid #d4e1ef;
-  border-radius: 4px;
+  padding: 0;
+  color: #718096;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
   box-shadow: none;
-
   font: inherit;
-  font-size: 0.76rem;
-  font-weight: 600;
-  line-height: 1;
-
+  font-size: 0.66rem;
+  font-weight: 500;
+  line-height: 1.2;
   cursor: pointer;
-
-  transition:
-    color 0.2s ease,
-    background 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-button.demo-code-link svg {
-  width: 15px;
-  height: 15px;
-  flex: 0 0 15px;
-  color: #5f7d9c;
   transition: color 0.2s ease;
 }
 
 button.demo-code-link:hover {
   color: var(--blue);
-  background: #edf5ff;
-  border-color: #b9d5f5;
-  box-shadow: 0 5px 14px rgba(8, 105, 232, 0.08);
-}
-
-button.demo-code-link:hover svg {
-  color: var(--blue);
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 button.mobile-demo-code-link {
