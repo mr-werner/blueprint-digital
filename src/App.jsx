@@ -104,6 +104,22 @@ const Icon = ({ name }) => {
 
     ),
 
+    key: (
+
+      <>
+
+        <circle cx="8" cy="15" r="4" />
+
+        <path d="M11 12l8-8" />
+
+        <path d="M15 8l3 3" />
+
+        <path d="M17 6l2 2" />
+
+      </>
+
+    ),
+
   };
 
 
@@ -422,7 +438,8 @@ export default function App() {
             setDemoModalOpen(true);
           }}
         >
-          Have a Demo Code?
+          <Icon name="key" />
+          <span>Already Have a Demo Code?</span>
         </button>
 
         <a href="#contact" className="nav-button">
@@ -564,7 +581,8 @@ export default function App() {
             setDemoModalOpen(true);
           }}
         >
-          Have a Demo Code?
+          <Icon name="key" />
+          <span>Already Have a Demo Code?</span>
         </button>
 
         <a
