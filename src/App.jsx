@@ -427,10 +427,9 @@ export default function App() {
           <a href="#about">Why Blueprint?</a>
 
           <a href="#contact">Contact</a>
+      </nav>
 
-
-
-          <div className="header-cta-group">
+      <div className="header-cta-group">
           <a href="#contact" className="nav-button">
             Start Your Project
           </a>
@@ -446,8 +445,6 @@ export default function App() {
             Already have a demo code?
           </button>
         </div>
-
-        </nav>
 
 
 

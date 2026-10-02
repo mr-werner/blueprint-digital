@@ -4436,3 +4436,27 @@ button.demo-modal-close:hover {
   }
 }
 
+/* ========================================
+   DESKTOP HEADER CENTERING
+   Keeps the primary navigation centered on
+   the viewport independently of logo/CTA widths.
+======================================== */
+
+@media (min-width: 1001px) {
+  .header {
+    position: sticky;
+  }
+
+  .desktop-nav {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    gap: 48px;
+  }
+
+  .header-cta-group {
+    position: absolute;
+    right: 7vw;
+  }
+}
+
