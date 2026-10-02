@@ -350,36 +350,51 @@ export default function App() {
 
 
 
-  function handleDemoSubmit(event) {
+ async function handleDemoSubmit(event) {
+  event.preventDefault();
 
-    event.preventDefault();
+  setDemoError("");
 
-    const code = demoCode.trim().toUpperCase();
+  const code = demoCode.trim();
 
-    // Add each prospect's demo code and Blueprint subdomain here.
-    const demoSites = {
+  if (!code) {
+    setDemoError("Please enter your demo code.");
+    return;
+  }
 
-      ACE: "https://ace.blueprintwebstudio.com",
+  try {
+    const response = await fetch("/api/demo", {
+      method: "POST",
 
-      FISHERMAN: "https://fisherman.blueprintwebstudio.com",
+      headers: {
+        "Content-Type": "application/json",
+      },
 
-    };
+      body: JSON.stringify({
+        code,
+      }),
+    });
 
-    const destination = demoSites[code];
+    const data = await response.json();
 
-    if (!destination) {
-
+    if (!response.ok || !data.success) {
       setDemoError(
-        "We couldn't find that demo code. Please check your code and try again."
+        data.message ||
+          "We couldn't find that demo code. Please check your code and try again."
       );
 
       return;
-
     }
 
-    window.location.href = destination;
+    window.location.href = data.destination;
+  } catch (error) {
+    console.error("Demo lookup error:", error);
 
+    setDemoError(
+      "We couldn't access your demo right now. Please try again."
+    );
   }
+}
 
 
   return (
