@@ -42,25 +42,30 @@ export default function Review() {
   const [loading, setLoading] = useState(() => Boolean(readStoredCode()));
   const [demos, setDemos] = useState(null);
   const [filter, setFilter] = useState("");
+  const [accessCode, setAccessCode] = useState("");
+  const [actionError, setActionError] = useState("");
 
   // Asks the server for the concept list; returns either demos or an error message
-  async function requestDemos(submittedCode) {
+  async function requestDemos(submittedCode, payload = {}) {
     try {
       const response = await fetch("/api/review", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: submittedCode }),
+        body: JSON.stringify({ ...payload, code: submittedCode }),
       });
 
       const data = await response.json().catch(() => ({}));
 
       if (!response.ok || !data.success) {
-        storeCode("");
-        return { error: data.message || "That review code isn't valid." };
+        if (response.status === 401) storeCode("");
+        return {
+          error: data.message || "That review code isn't valid.",
+          locked: response.status === 401,
+        };
       }
 
       storeCode(submittedCode);
-      return { demos: data.demos };
+      return { demos: data.demos, code: submittedCode };
     } catch (lookupError) {
       console.error("Review lookup error:", lookupError);
       return {
@@ -71,8 +76,29 @@ export default function Review() {
 
   function applyResult(result) {
     setLoading(false);
-    if (result.demos) setDemos(result.demos);
-    else setError(result.error);
+    if (result.demos) {
+      setDemos(result.demos);
+      setAccessCode(result.code);
+    } else setError(result.error);
+  }
+
+  // Saves a note or checkbox change, then refreshes the list from the server
+  async function runAction(payload) {
+    setActionError("");
+    const result = await requestDemos(accessCode, payload);
+
+    if (result.demos) {
+      setDemos(result.demos);
+      return true;
+    }
+
+    if (result.locked) {
+      lock();
+      setError("Your review code changed. Enter the new code.");
+    } else {
+      setActionError(result.error);
+    }
+    return false;
   }
 
   // Reopen without retyping the code for the rest of this browser tab
@@ -98,6 +124,7 @@ export default function Review() {
   function lock() {
     storeCode("");
     setDemos(null);
+    setAccessCode("");
     setCode("");
   }
 
@@ -152,6 +179,12 @@ export default function Review() {
   );
   const activeCount = demos.filter((demo) => demo.status === "active").length;
   const viewedCount = demos.filter((demo) => demo.view_count > 0).length;
+  const readyCount = demos.filter((demo) => demo.ready_to_email).length;
+  const openNoteCount = demos.reduce(
+    (total, demo) =>
+      total + demo.notes.filter((note) => !note.resolved_at).length,
+    0
+  );
 
   return (
     <main className="review-page">
@@ -161,7 +194,8 @@ export default function Review() {
           <h1>Concept review</h1>
           <p className="review-summary">
             {demos.length} concepts · {activeCount} active · {viewedCount}{" "}
-            opened by a client
+            opened by a client · {readyCount} ready to email ·{" "}
+            {openNoteCount} open {openNoteCount === 1 ? "note" : "notes"}
           </p>
         </div>
         <div className="review-header-actions">
@@ -179,9 +213,18 @@ export default function Review() {
         </div>
       </header>
 
+      {actionError && (
+        <p className="review-error review-action-error" role="alert">
+          {actionError}
+        </p>
+      )}
+
       <ul className="review-grid">
         {visible.map((demo) => (
-          <li key={demo.id} className="review-card">
+          <li
+            key={demo.id}
+            className={`review-card${demo.ready_to_email ? " review-card-ready" : ""}`}
+          >
             <div className="review-card-top">
               <p className="review-meta">
                 {[demo.category, demo.city].filter(Boolean).join(" · ") ||
@@ -250,6 +293,35 @@ export default function Review() {
                 <dd>{formatDate(demo.created_at)}</dd>
               </div>
             </dl>
+
+            <ConceptNotes demo={demo} onAction={runAction} />
+
+            <label className="review-ready">
+              <input
+                type="checkbox"
+                checked={demo.ready_to_email}
+                onChange={(event) => {
+                  const ready = event.target.checked;
+                  // Show the change right away; the server reply confirms it
+                  setDemos((current) =>
+                    current.map((item) =>
+                      item.id === demo.id
+                        ? { ...item, ready_to_email: ready, ready_at: new Date().toISOString() }
+                        : item
+                    )
+                  );
+                  runAction({ action: "setReady", demoId: demo.id, ready });
+                }}
+              />
+              <span>
+                <strong>Ready to email the client</strong>
+                <small>
+                  {demo.ready_to_email
+                    ? `Marked ${formatDate(demo.ready_at)}. Nothing is sent until you ask.`
+                    : "Check when this concept is finished. Nothing is sent automatically."}
+                </small>
+              </span>
+            </label>
           </li>
         ))}
       </ul>
@@ -258,5 +330,102 @@ export default function Review() {
         <p className="review-empty">No concepts match “{filter}”.</p>
       )}
     </main>
+  );
+}
+
+function ConceptNotes({ demo, onAction }) {
+  const [draft, setDraft] = useState("");
+  const [saving, setSaving] = useState(false);
+  const openNotes = demo.notes.filter((note) => !note.resolved_at);
+  const doneNotes = demo.notes.filter((note) => note.resolved_at);
+
+  async function addNote(event) {
+    event.preventDefault();
+    const body = draft.trim();
+    if (!body) return;
+
+    setSaving(true);
+    const saved = await onAction({ action: "addNote", demoId: demo.id, body });
+    setSaving(false);
+    if (saved) setDraft("");
+  }
+
+  function renderNote(note) {
+    const done = Boolean(note.resolved_at);
+
+    return (
+      <li key={note.id} className={`review-note${done ? " review-note-done" : ""}`}>
+        <p className="review-note-body">{note.body}</p>
+        {note.resolution && (
+          <p className="review-note-resolution">Done: {note.resolution}</p>
+        )}
+        <div className="review-note-meta">
+          <span>
+            {formatDate(note.created_at)}
+            {done && ` · done ${formatDate(note.resolved_at)}`}
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              onAction({
+                action: "setNoteResolved",
+                noteId: note.id,
+                resolved: !done,
+              })
+            }
+          >
+            {done ? "Reopen" : "Mark done"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm("Delete this note?")) {
+                onAction({ action: "deleteNote", noteId: note.id });
+              }
+            }}
+          >
+            Delete
+          </button>
+        </div>
+      </li>
+    );
+  }
+
+  return (
+    <section className="review-notes" aria-label={`Notes for ${demo.business_name}`}>
+      <h3>
+        Notes for Claude
+        {openNotes.length > 0 && (
+          <span className="review-notes-count">{openNotes.length} open</span>
+        )}
+      </h3>
+
+      {openNotes.length > 0 && (
+        <ul className="review-note-list">{openNotes.map(renderNote)}</ul>
+      )}
+
+      {doneNotes.length > 0 && (
+        <details className="review-notes-done">
+          <summary>
+            {doneNotes.length} done {doneNotes.length === 1 ? "note" : "notes"}
+          </summary>
+          <ul className="review-note-list">{doneNotes.map(renderNote)}</ul>
+        </details>
+      )}
+
+      <form className="review-note-form" onSubmit={addNote}>
+        <textarea
+          rows={2}
+          maxLength={4000}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder="What should change on this concept?"
+          aria-label={`New note for ${demo.business_name}`}
+        />
+        <button type="submit" disabled={saving || !draft.trim()}>
+          {saving ? "Saving…" : "Add note"}
+        </button>
+      </form>
+    </section>
   );
 }

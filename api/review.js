@@ -1,5 +1,62 @@
 import { neon } from "@neondatabase/serverless";
 
+const MAX_NOTE_LENGTH = 4000;
+
+function fail(res, status, message) {
+  return res.status(status).json({ success: false, message });
+}
+
+function toId(value) {
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+async function loadDemos(sql) {
+  // Every client demo, newest first. Viewing this list does not count as a
+  // client view, so view_count stays a true measure of client interest.
+  const demos = await sql`
+    SELECT
+      id,
+      business_name,
+      demo_code,
+      demo_url,
+      status,
+      original_url,
+      category,
+      city,
+      background,
+      created_at,
+      first_viewed_at,
+      last_viewed_at,
+      view_count,
+      ready_to_email,
+      ready_at
+    FROM demos
+    WHERE is_admin = false
+    ORDER BY created_at DESC, id DESC
+  `;
+
+  const notes = await sql`
+    SELECT n.id, n.demo_id, n.body, n.created_at, n.resolved_at, n.resolution
+    FROM demo_notes n
+    JOIN demos d ON d.id = n.demo_id
+    WHERE d.is_admin = false
+    ORDER BY n.created_at ASC, n.id ASC
+  `;
+
+  const notesByDemo = new Map();
+  for (const note of notes) {
+    const key = String(note.demo_id);
+    if (!notesByDemo.has(key)) notesByDemo.set(key, []);
+    notesByDemo.get(key).push(note);
+  }
+
+  return demos.map((demo) => ({
+    ...demo,
+    notes: notesByDemo.get(String(demo.id)) ?? [],
+  }));
+}
+
 export default async function handler(req, res) {
   // Never cache this response; it is only for the studio owner
   res.setHeader("Cache-Control", "no-store");
@@ -8,22 +65,16 @@ export default async function handler(req, res) {
   // Only allow POST requests
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
-
-    return res.status(405).json({
-      success: false,
-      message: "Method not allowed.",
-    });
+    return fail(res, 405, "Method not allowed.");
   }
 
   try {
-    const { code } = req.body ?? {};
+    const { code, action = "list", demoId, noteId, body, ready, resolved } =
+      req.body ?? {};
 
     // Make sure a review code was provided
     if (!code || typeof code !== "string" || !code.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Please enter your review code.",
-      });
+      return fail(res, 400, "Please enter your review code.");
     }
 
     // Normalize the code so capitalization doesn't matter
@@ -34,11 +85,7 @@ export default async function handler(req, res) {
 
     if (!connectionString) {
       console.error("Missing BLUEPRINT_DB_DATABASE_URL environment variable.");
-
-      return res.status(500).json({
-        success: false,
-        message: "The review page is temporarily unavailable.",
-      });
+      return fail(res, 500, "The review page is temporarily unavailable.");
     }
 
     // Connect to Neon
@@ -55,44 +102,73 @@ export default async function handler(req, res) {
     `;
 
     if (access.length === 0) {
-      return res.status(401).json({
-        success: false,
-        message: "That review code isn't valid.",
-      });
+      return fail(res, 401, "That review code isn't valid.");
     }
 
-    // Every client demo, newest first. Viewing this list does not count as a
-    // client view, so view_count stays a true measure of client interest.
-    const demos = await sql`
-      SELECT
-        id,
-        business_name,
-        demo_code,
-        demo_url,
-        status,
-        original_url,
-        category,
-        city,
-        background,
-        created_at,
-        first_viewed_at,
-        last_viewed_at,
-        view_count
-      FROM demos
-      WHERE is_admin = false
-      ORDER BY created_at DESC, id DESC
-    `;
+    if (action === "addNote") {
+      const id = toId(demoId);
+      const text = typeof body === "string" ? body.trim() : "";
+
+      if (!id || !text) return fail(res, 400, "Write a note first.");
+      if (text.length > MAX_NOTE_LENGTH) {
+        return fail(res, 400, "That note is too long.");
+      }
+
+      const added = await sql`
+        INSERT INTO demo_notes (demo_id, body)
+        SELECT id, ${text} FROM demos WHERE id = ${id} AND is_admin = false
+        RETURNING id
+      `;
+      if (added.length === 0) return fail(res, 404, "Concept not found.");
+    } else if (action === "setNoteResolved") {
+      const id = toId(noteId);
+      if (!id) return fail(res, 400, "Note not found.");
+
+      // Reopening a note clears any resolution text left on it
+      if (resolved) {
+        await sql`
+          UPDATE demo_notes
+          SET resolved_at = COALESCE(resolved_at, NOW())
+          WHERE id = ${id}
+        `;
+      } else {
+        await sql`
+          UPDATE demo_notes
+          SET resolved_at = NULL, resolution = NULL
+          WHERE id = ${id}
+        `;
+      }
+    } else if (action === "deleteNote") {
+      const id = toId(noteId);
+      if (!id) return fail(res, 400, "Note not found.");
+
+      await sql`DELETE FROM demo_notes WHERE id = ${id}`;
+    } else if (action === "setReady") {
+      // Only records the decision; no email is sent from here
+      const id = toId(demoId);
+      if (!id) return fail(res, 400, "Concept not found.");
+
+      await sql`
+        UPDATE demos
+        SET
+          ready_to_email = ${Boolean(ready)},
+          ready_at = CASE WHEN ${Boolean(ready)} THEN NOW() ELSE NULL END
+        WHERE id = ${id} AND is_admin = false
+      `;
+    } else if (action !== "list") {
+      return fail(res, 400, "Unknown action.");
+    }
 
     return res.status(200).json({
       success: true,
-      demos,
+      demos: await loadDemos(sql),
     });
   } catch (error) {
     console.error("Review lookup error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "We couldn't load the review page right now. Please try again.",
-    });
+    return fail(
+      res,
+      500,
+      "We couldn't load the review page right now. Please try again."
+    );
   }
 }
