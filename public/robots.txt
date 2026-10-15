@@ -1,4 +1,5 @@
 User-agent: *
 Allow: /
+Disallow: /review
 
 Sitemap: https://blueprintwebstudio.com/sitemap.xml
