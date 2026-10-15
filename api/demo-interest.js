@@ -2,7 +2,18 @@ export default async function handler(req, res) {
   const allowedOrigins = [
     "https://ace.blueprintwebstudio.com",
     "https://ncts.blueprintwebstudio.com",
-    "https://cfrr.blueprintwebstudio.com"
+    "https://cfrr.blueprintwebstudio.com",
+    "https://fsa.blueprintwebstudio.com",
+    "https://agac.blueprintwebstudio.com",
+    "https://aat.blueprintwebstudio.com",
+    "https://har.blueprintwebstudio.com",
+    "https://wt.blueprintwebstudio.com",
+    "https://mar.blueprintwebstudio.com",
+    "https://tta.blueprintwebstudio.com",
+    "https://cph.blueprintwebstudio.com",
+    "https://bud.blueprintwebstudio.com",
+    "https://pi.blueprintwebstudio.com",
+    "https://aur.blueprintwebstudio.com"
   ];
 
   const origin = req.headers.origin;
