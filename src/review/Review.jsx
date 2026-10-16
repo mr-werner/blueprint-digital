@@ -1,18 +1,24 @@
 import { useEffect, useState } from "react";
-import { formatDate } from "./format.js";
-import { ContactInfo, EmailPanel, Logo, Preview } from "./ReviewParts.jsx";
+import { formatDate, methodLabel } from "./format.js";
+import {
+  ContactInfo,
+  EmailPanel,
+  Logo,
+  Outreach,
+  Preview,
+} from "./ReviewParts.jsx";
 
 const STORAGE_KEY = "bws-review-code";
 
 // Contact filter tabs; each test returns true for the concepts it shows
 const CONTACT_FILTERS = [
   { key: "all", label: "All", test: () => true },
-  { key: "todo", label: "Not contacted", test: (demo) => !demo.emailed_at },
-  { key: "contacted", label: "Contacted", test: (demo) => Boolean(demo.emailed_at) },
+  { key: "todo", label: "Not contacted", test: (demo) => demo.contacts.length === 0 },
+  { key: "contacted", label: "Contacted", test: (demo) => demo.contacts.length > 0 },
   {
     key: "noEmail",
     label: "Needs an email address",
-    test: (demo) => !demo.emailed_at && !demo.contact_email,
+    test: (demo) => !demo.contact_email,
   },
 ];
 
@@ -188,7 +194,7 @@ export default function Review() {
   const activeCount = demos.filter((demo) => demo.status === "active").length;
   const viewedCount = demos.filter((demo) => demo.view_count > 0).length;
   const readyCount = demos.filter((demo) => demo.ready_to_email).length;
-  const contactedCount = demos.filter((demo) => demo.emailed_at).length;
+  const contactedCount = demos.filter((demo) => demo.contacts.length > 0).length;
   const openNoteCount = demos.reduce(
     (total, demo) =>
       total + demo.notes.filter((note) => !note.resolved_at).length,
@@ -257,9 +263,12 @@ export default function Review() {
                     "Concept"}
                 </p>
                 <h2>{demo.business_name}</h2>
-                {demo.emailed_at && (
+                {demo.contacts.length > 0 && (
                   <p className="review-contacted">
-                    Contacted {formatDate(demo.emailed_at)}
+                    Reached by{" "}
+                    {[...new Set(demo.contacts.map((entry) => entry.method))]
+                      .map((key) => methodLabel(key).toLowerCase())
+                      .join(", ")}
                   </p>
                 )}
               </div>
@@ -338,6 +347,8 @@ export default function Review() {
                 </small>
               </span>
             </label>
+
+            <Outreach demo={demo} onAction={runAction} />
 
             <EmailPanel demo={demo} onAction={runAction} />
           </li>

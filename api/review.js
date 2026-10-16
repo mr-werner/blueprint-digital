@@ -6,6 +6,7 @@ const MAX_EMAIL_LENGTH = 20000;
 const EMAIL_FROM = "Justin · Blueprint WebStudio <hello@blueprintwebstudio.com>";
 const STUDIO_INBOX = "hello@blueprintwebstudio.com";
 const EMAIL_PATTERN = /^[^\s@<>,;]+@[^\s@<>,;]+\.[a-z]{2,}$/i;
+const CONTACT_METHODS = ["email", "phone", "form"];
 
 // Bracketed lowercase phrases like "[studio mailing address]" are draft
 // placeholders. Uppercase tokens like "[GEOTITLE]" are quoted from client sites.
@@ -86,7 +87,8 @@ async function loadDemos(sql) {
       email_subject,
       email_body,
       emailed_at,
-      emailed_to
+      emailed_to,
+      contact_form_url
     FROM demos
     WHERE is_admin = false
     ORDER BY created_at DESC, id DESC
@@ -100,16 +102,31 @@ async function loadDemos(sql) {
     ORDER BY n.created_at ASC, n.id ASC
   `;
 
-  const notesByDemo = new Map();
-  for (const note of notes) {
-    const key = String(note.demo_id);
-    if (!notesByDemo.has(key)) notesByDemo.set(key, []);
-    notesByDemo.get(key).push(note);
-  }
+  // Every way each business has been reached, oldest first
+  const contacts = await sql`
+    SELECT c.id, c.demo_id, c.method, c.contacted_at, c.note
+    FROM demo_contacts c
+    JOIN demos d ON d.id = c.demo_id
+    WHERE d.is_admin = false
+    ORDER BY c.contacted_at ASC NULLS FIRST, c.id ASC
+  `;
+
+  const groupByDemo = (rows) => {
+    const grouped = new Map();
+    for (const row of rows) {
+      const key = String(row.demo_id);
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key).push(row);
+    }
+    return grouped;
+  };
+  const notesByDemo = groupByDemo(notes);
+  const contactsByDemo = groupByDemo(contacts);
 
   return demos.map((demo) => ({
     ...demo,
     notes: notesByDemo.get(String(demo.id)) ?? [],
+    contacts: contactsByDemo.get(String(demo.id)) ?? [],
   }));
 }
 
@@ -133,6 +150,9 @@ export default async function handler(req, res) {
       body,
       ready,
       resolved,
+      contactId,
+      method,
+      formUrl,
       to,
       subject,
       sendAgain,
@@ -221,6 +241,39 @@ export default async function handler(req, res) {
           ready_at = CASE WHEN ${Boolean(ready)} THEN NOW() ELSE NULL END
         WHERE id = ${id} AND is_admin = false
       `;
+    } else if (action === "logContact") {
+      // Records an outreach attempt made outside the page (a call, a form)
+      const id = toId(demoId);
+      if (!id) return fail(res, 400, "Concept not found.");
+      if (!CONTACT_METHODS.includes(method)) {
+        return fail(res, 400, "Pick how you reached them.");
+      }
+      const text = typeof body === "string" ? body.trim().slice(0, 500) : "";
+
+      const added = await sql`
+        INSERT INTO demo_contacts (demo_id, method, contacted_at, note)
+        SELECT id, ${method}, NOW(), ${text || null}
+        FROM demos WHERE id = ${id} AND is_admin = false
+        RETURNING id
+      `;
+      if (added.length === 0) return fail(res, 404, "Concept not found.");
+    } else if (action === "deleteContact") {
+      const id = toId(contactId);
+      if (!id) return fail(res, 400, "Entry not found.");
+
+      await sql`DELETE FROM demo_contacts WHERE id = ${id}`;
+    } else if (action === "saveFormUrl") {
+      const id = toId(demoId);
+      if (!id) return fail(res, 400, "Concept not found.");
+      const url = typeof formUrl === "string" ? formUrl.trim() : "";
+      if (url && !/^https?:\/\/\S+$/i.test(url)) {
+        return fail(res, 400, "That link should start with https://");
+      }
+
+      await sql`
+        UPDATE demos SET contact_form_url = ${url || null}
+        WHERE id = ${id} AND is_admin = false
+      `;
     } else if (action === "saveEmail") {
       // Saves the recipient and the draft without sending anything
       const id = toId(demoId);
@@ -300,6 +353,10 @@ export default async function handler(req, res) {
         UPDATE demos
         SET emailed_at = NOW(), emailed_to = ${recipient}, email_message_id = ${data?.id ?? null}
         WHERE id = ${id}
+      `;
+      await sql`
+        INSERT INTO demo_contacts (demo_id, method, contacted_at, note)
+        VALUES (${id}, 'email', NOW(), ${`Sent from the review page to ${recipient}`})
       `;
     } else if (action !== "list") {
       return fail(res, 400, "Unknown action.");
