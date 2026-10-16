@@ -819,3 +819,169 @@ p {
   opacity: 0.45;
   cursor: default;
 }
+
+.review-outreach {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.review-outreach h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.review-outreach-methods {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.review-outreach-methods li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font-size: 13.5px;
+}
+
+.review-outreach-methods li.review-outreach-done {
+  border-color: var(--green);
+  background: var(--green-soft);
+}
+
+.review-outreach-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.review-outreach-state {
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.review-outreach-done .review-outreach-state {
+  color: var(--green);
+  font-weight: 600;
+}
+
+.review-outreach-reach {
+  grid-column: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.review-outreach-reach a {
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+}
+
+.review-outreach-reach a:hover {
+  color: var(--blue);
+  border-color: var(--blue);
+}
+
+.review-outreach-log {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.review-outreach-log:hover:not(:disabled) {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.review-outreach-edit,
+.review-outreach-history button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.review-outreach-form {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+
+.review-outreach-form input {
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.review-outreach-form button {
+  height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--blue);
+  color: var(--white);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.review-outreach-history summary {
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.review-outreach-history ul {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.review-outreach-history li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.review-outreach-history small {
+  display: block;
+  color: var(--muted);
+}

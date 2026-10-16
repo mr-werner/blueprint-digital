@@ -1,5 +1,11 @@
 import { useState } from "react";
-import { formatDate, hostOf, PLACEHOLDER_PATTERN } from "./format.js";
+import {
+  formatDate,
+  hostOf,
+  methodLabel,
+  OUTREACH_METHODS,
+  PLACEHOLDER_PATTERN,
+} from "./format.js";
 
 function initials(name) {
   return name
@@ -254,5 +260,165 @@ export function EmailPanel({ demo, onAction }) {
         </button>
       </div>
     </details>
+  );
+}
+
+// How the business has been reached so far, and a quick way to try the others
+export function Outreach({ demo, onAction }) {
+  const [busy, setBusy] = useState("");
+  const [editingForm, setEditingForm] = useState(false);
+  const [formUrl, setFormUrl] = useState(demo.contact_form_url || "");
+  const phoneDigits = (demo.phone || "").replace(/\D/g, "");
+
+  async function run(key, payload) {
+    setBusy(key);
+    const ok = await onAction(payload);
+    setBusy("");
+    return ok;
+  }
+
+  async function saveFormUrl(event) {
+    event.preventDefault();
+    const ok = await run("formUrl", {
+      action: "saveFormUrl",
+      demoId: demo.id,
+      formUrl,
+    });
+    if (ok) setEditingForm(false);
+  }
+
+  function reachLink(key) {
+    if (key === "email") {
+      return demo.contact_email ? (
+        <a href={`mailto:${demo.contact_email}`}>{demo.contact_email}</a>
+      ) : (
+        <span className="review-missing">No address on file</span>
+      );
+    }
+    if (key === "phone") {
+      return demo.phone ? (
+        <a href={`tel:${phoneDigits}`}>{demo.phone}</a>
+      ) : (
+        <span className="review-missing">No number on file</span>
+      );
+    }
+    if (editingForm) {
+      return (
+        <form className="review-outreach-form" onSubmit={saveFormUrl}>
+          <input
+            type="url"
+            value={formUrl}
+            onChange={(event) => setFormUrl(event.target.value)}
+            placeholder="https://…/contact"
+            aria-label={`Contact form link for ${demo.business_name}`}
+          />
+          <button type="submit" disabled={busy === "formUrl"}>
+            Save
+          </button>
+        </form>
+      );
+    }
+    return (
+      <>
+        {demo.contact_form_url ? (
+          <a href={demo.contact_form_url} target="_blank" rel="noreferrer">
+            Open form
+          </a>
+        ) : demo.original_url ? (
+          <a href={demo.original_url} target="_blank" rel="noreferrer">
+            Find it on their site
+          </a>
+        ) : (
+          <span className="review-missing">No link on file</span>
+        )}
+        <button
+          type="button"
+          className="review-outreach-edit"
+          onClick={() => setEditingForm(true)}
+        >
+          {demo.contact_form_url ? "Edit link" : "Add link"}
+        </button>
+      </>
+    );
+  }
+
+  return (
+    <section
+      className="review-outreach"
+      aria-label={`How ${demo.business_name} has been contacted`}
+    >
+      <h3>Outreach</h3>
+
+      <ul className="review-outreach-methods">
+        {OUTREACH_METHODS.map(({ key, label }) => {
+          const tries = demo.contacts.filter((entry) => entry.method === key);
+          const last = tries[tries.length - 1];
+
+          return (
+            <li
+              key={key}
+              className={tries.length ? "review-outreach-done" : undefined}
+            >
+              <div className="review-outreach-head">
+                <strong>{label}</strong>
+                <span className="review-outreach-state">
+                  {tries.length === 0
+                    ? "Not tried"
+                    : last.contacted_at
+                      ? `Tried ${formatDate(last.contacted_at)}${
+                          tries.length > 1 ? ` · ${tries.length}×` : ""
+                        }`
+                      : "Tried earlier"}
+                </span>
+              </div>
+              <div className="review-outreach-reach">{reachLink(key)}</div>
+              <button
+                type="button"
+                className="review-outreach-log"
+                disabled={busy === key}
+                onClick={() =>
+                  run(key, { action: "logContact", demoId: demo.id, method: key })
+                }
+              >
+                {busy === key ? "Saving…" : `Log ${label.toLowerCase()}`}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+
+      {demo.contacts.length > 0 && (
+        <details className="review-outreach-history">
+          <summary>
+            History ({demo.contacts.length}{" "}
+            {demo.contacts.length === 1 ? "entry" : "entries"})
+          </summary>
+          <ul>
+            {demo.contacts.map((entry) => (
+              <li key={entry.id}>
+                <span>
+                  <strong>{methodLabel(entry.method)}</strong>
+                  {" · "}
+                  {entry.contacted_at
+                    ? formatDate(entry.contacted_at)
+                    : "date not recorded"}
+                  {entry.note && <small>{entry.note}</small>}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm("Remove this entry?")) {
+                      onAction({ action: "deleteContact", contactId: entry.id });
+                    }
+                  }}
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
   );
 }
