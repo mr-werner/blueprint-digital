@@ -1,22 +1,12 @@
 import { useEffect, useState } from "react";
+import { formatDate } from "./format.js";
+import { ContactInfo, EmailPanel, Logo, Preview } from "./ReviewParts.jsx";
 
 const STORAGE_KEY = "bws-review-code";
 
-function hostOf(url) {
-  try {
-    return new URL(url).host.replace(/^www\./, "");
-  } catch {
-    return url;
-  }
-}
-
-function formatDate(value) {
-  if (!value) return null;
-  return new Date(value).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+function shotUrl(code, id, kind) {
+  const params = new URLSearchParams({ code, id: String(id), kind });
+  return `/api/review-shot?${params}`;
 }
 
 function readStoredCode() {
@@ -225,11 +215,15 @@ export default function Review() {
             key={demo.id}
             className={`review-card${demo.ready_to_email ? " review-card-ready" : ""}`}
           >
-            <div className="review-card-top">
-              <p className="review-meta">
-                {[demo.category, demo.city].filter(Boolean).join(" · ") ||
-                  "Concept"}
-              </p>
+            <div className="review-card-head">
+              <Logo demo={demo} code={accessCode} />
+              <div className="review-card-title">
+                <p className="review-meta">
+                  {[demo.category, demo.city].filter(Boolean).join(" · ") ||
+                    "Concept"}
+                </p>
+                <h2>{demo.business_name}</h2>
+              </div>
               <span
                 className={`review-status review-status-${demo.status}`}
                 title={`Status in Neon: ${demo.status}`}
@@ -238,42 +232,25 @@ export default function Review() {
               </span>
             </div>
 
-            <h2>{demo.business_name}</h2>
+            <ContactInfo demo={demo} />
+
+            <div className="review-previews">
+              <Preview
+                label="Original"
+                url={demo.original_url}
+                src={shotUrl(accessCode, demo.id, "original")}
+              />
+              <Preview
+                label="Concept"
+                url={demo.demo_url}
+                src={shotUrl(accessCode, demo.id, "concept")}
+                primary
+              />
+            </div>
 
             {demo.background && (
               <p className="review-background">{demo.background}</p>
             )}
-
-            <div className="review-links">
-              <a
-                href={demo.demo_url}
-                target="_blank"
-                rel="noreferrer"
-                className="review-link review-link-primary"
-              >
-                <span className="review-link-label">Concept</span>
-                <span className="review-link-url">{hostOf(demo.demo_url)}</span>
-              </a>
-
-              {demo.original_url ? (
-                <a
-                  href={demo.original_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="review-link"
-                >
-                  <span className="review-link-label">Original site</span>
-                  <span className="review-link-url">
-                    {hostOf(demo.original_url)}
-                  </span>
-                </a>
-              ) : (
-                <span className="review-link review-link-empty">
-                  <span className="review-link-label">Original site</span>
-                  <span className="review-link-url">Not on file</span>
-                </span>
-              )}
-            </div>
 
             <dl className="review-facts">
               <div>
@@ -317,11 +294,13 @@ export default function Review() {
                 <strong>Ready to email the client</strong>
                 <small>
                   {demo.ready_to_email
-                    ? `Marked ${formatDate(demo.ready_at)}. Nothing is sent until you ask.`
+                    ? `Marked ${formatDate(demo.ready_at)}. Nothing is sent until you press Send.`
                     : "Check when this concept is finished. Nothing is sent automatically."}
                 </small>
               </span>
             </label>
+
+            <EmailPanel demo={demo} onAction={runAction} />
           </li>
         ))}
       </ul>
