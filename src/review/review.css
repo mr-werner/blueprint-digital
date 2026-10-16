@@ -193,6 +193,61 @@ p {
   color: var(--blue);
 }
 
+.review-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -12px 0 22px;
+}
+
+.review-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.review-tab span {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--off-white);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.review-tab:hover {
+  border-color: var(--blue);
+}
+
+.review-tab[aria-pressed="true"] {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: var(--white);
+}
+
+.review-tab[aria-pressed="true"] span {
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--white);
+}
+
+.review-contacted {
+  margin-top: 4px;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .review-grid {
   list-style: none;
   margin: 0;

@@ -4,6 +4,18 @@ import { ContactInfo, EmailPanel, Logo, Preview } from "./ReviewParts.jsx";
 
 const STORAGE_KEY = "bws-review-code";
 
+// Contact filter tabs; each test returns true for the concepts it shows
+const CONTACT_FILTERS = [
+  { key: "all", label: "All", test: () => true },
+  { key: "todo", label: "Not contacted", test: (demo) => !demo.emailed_at },
+  { key: "contacted", label: "Contacted", test: (demo) => Boolean(demo.emailed_at) },
+  {
+    key: "noEmail",
+    label: "Needs an email address",
+    test: (demo) => !demo.emailed_at && !demo.contact_email,
+  },
+];
+
 function shotUrl(code, id, kind) {
   const params = new URLSearchParams({ code, id: String(id), kind });
   return `/api/review-shot?${params}`;
@@ -32,6 +44,7 @@ export default function Review() {
   const [loading, setLoading] = useState(() => Boolean(readStoredCode()));
   const [demos, setDemos] = useState(null);
   const [filter, setFilter] = useState("");
+  const [contactFilter, setContactFilter] = useState("all");
   const [accessCode, setAccessCode] = useState("");
   const [actionError, setActionError] = useState("");
 
@@ -160,16 +173,22 @@ export default function Review() {
   }
 
   const query = filter.trim().toLowerCase();
-  const visible = demos.filter((demo) =>
-    [demo.business_name, demo.category, demo.city, demo.demo_url]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase()
-      .includes(query)
+  const contactTest =
+    CONTACT_FILTERS.find((item) => item.key === contactFilter)?.test ??
+    CONTACT_FILTERS[0].test;
+  const visible = demos.filter(
+    (demo) =>
+      contactTest(demo) &&
+      [demo.business_name, demo.category, demo.city, demo.demo_url]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query)
   );
   const activeCount = demos.filter((demo) => demo.status === "active").length;
   const viewedCount = demos.filter((demo) => demo.view_count > 0).length;
   const readyCount = demos.filter((demo) => demo.ready_to_email).length;
+  const contactedCount = demos.filter((demo) => demo.emailed_at).length;
   const openNoteCount = demos.reduce(
     (total, demo) =>
       total + demo.notes.filter((note) => !note.resolved_at).length,
@@ -184,7 +203,7 @@ export default function Review() {
           <h1>Concept review</h1>
           <p className="review-summary">
             {demos.length} concepts · {activeCount} active · {viewedCount}{" "}
-            opened by a client · {readyCount} ready to email ·{" "}
+            opened by a client · {readyCount} ready to email · {contactedCount} contacted ·{" "}
             {openNoteCount} open {openNoteCount === 1 ? "note" : "notes"}
           </p>
         </div>
@@ -202,6 +221,21 @@ export default function Review() {
           </button>
         </div>
       </header>
+
+      <div className="review-tabs" role="group" aria-label="Filter by contact">
+        {CONTACT_FILTERS.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            className="review-tab"
+            aria-pressed={contactFilter === item.key}
+            onClick={() => setContactFilter(item.key)}
+          >
+            {item.label}
+            <span>{demos.filter(item.test).length}</span>
+          </button>
+        ))}
+      </div>
 
       {actionError && (
         <p className="review-error review-action-error" role="alert">
@@ -223,6 +257,11 @@ export default function Review() {
                     "Concept"}
                 </p>
                 <h2>{demo.business_name}</h2>
+                {demo.emailed_at && (
+                  <p className="review-contacted">
+                    Contacted {formatDate(demo.emailed_at)}
+                  </p>
+                )}
               </div>
               <span
                 className={`review-status review-status-${demo.status}`}
@@ -306,7 +345,9 @@ export default function Review() {
       </ul>
 
       {visible.length === 0 && (
-        <p className="review-empty">No concepts match “{filter}”.</p>
+        <p className="review-empty">
+          {query ? `No concepts match “${filter}” here.` : "No concepts here."}
+        </p>
       )}
     </main>
   );
