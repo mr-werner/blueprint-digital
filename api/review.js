@@ -88,7 +88,9 @@ async function loadDemos(sql) {
       email_body,
       emailed_at,
       emailed_to,
-      contact_form_url
+      contact_form_url,
+      not_interested_at,
+      not_interested_note
     FROM demos
     WHERE is_admin = false
     ORDER BY created_at DESC, id DESC
@@ -156,6 +158,7 @@ export default async function handler(req, res) {
       to,
       subject,
       sendAgain,
+      notInterested,
     } = req.body ?? {};
 
     // Make sure a review code was provided
@@ -241,6 +244,27 @@ export default async function handler(req, res) {
           ready_at = CASE WHEN ${Boolean(ready)} THEN NOW() ELSE NULL END
         WHERE id = ${id} AND is_admin = false
       `;
+    } else if (action === "setNotInterested") {
+      // The business replied that they don't want the redesign; undo clears it
+      const id = toId(demoId);
+      if (!id) return fail(res, 400, "Concept not found.");
+      const reason = typeof body === "string" ? body.trim().slice(0, 500) : "";
+
+      if (notInterested) {
+        await sql`
+          UPDATE demos
+          SET
+            not_interested_at = COALESCE(not_interested_at, NOW()),
+            not_interested_note = ${reason || null}
+          WHERE id = ${id} AND is_admin = false
+        `;
+      } else {
+        await sql`
+          UPDATE demos
+          SET not_interested_at = NULL, not_interested_note = NULL
+          WHERE id = ${id} AND is_admin = false
+        `;
+      }
     } else if (action === "logContact") {
       // Records an outreach attempt made outside the page (a call, a form)
       const id = toId(demoId);
@@ -300,7 +324,7 @@ export default async function handler(req, res) {
       if (!id) return fail(res, 400, "Concept not found.");
 
       const rows = await sql`
-        SELECT id, contact_email, email_subject, email_body, ready_to_email, emailed_at
+        SELECT id, contact_email, email_subject, email_body, ready_to_email, emailed_at, not_interested_at
         FROM demos
         WHERE id = ${id} AND is_admin = false
       `;
@@ -312,6 +336,9 @@ export default async function handler(req, res) {
       const emailSubject = (demo.email_subject || "").trim();
       const emailBody = (demo.email_body || "").trim();
 
+      if (demo.not_interested_at) {
+        return fail(res, 400, "This business said they're not interested.");
+      }
       if (!demo.ready_to_email) {
         return fail(res, 400, "Check \"Ready to email the client\" first.");
       }

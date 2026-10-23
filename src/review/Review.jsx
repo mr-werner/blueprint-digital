@@ -4,22 +4,35 @@ import {
   ContactInfo,
   EmailPanel,
   Logo,
+  NotInterested,
   Outreach,
   Preview,
 } from "./ReviewParts.jsx";
 
 const STORAGE_KEY = "bws-review-code";
 
+// Businesses that replied "no thanks" are kept out of every tab but their own
+const isDeclined = (demo) => Boolean(demo.not_interested_at);
+
 // Contact filter tabs; each test returns true for the concepts it shows
 const CONTACT_FILTERS = [
-  { key: "all", label: "All", test: () => true },
-  { key: "todo", label: "Not contacted", test: (demo) => demo.contacts.length === 0 },
-  { key: "contacted", label: "Contacted", test: (demo) => demo.contacts.length > 0 },
+  { key: "all", label: "All", test: (demo) => !isDeclined(demo) },
+  {
+    key: "todo",
+    label: "Not contacted",
+    test: (demo) => !isDeclined(demo) && demo.contacts.length === 0,
+  },
+  {
+    key: "contacted",
+    label: "Contacted",
+    test: (demo) => !isDeclined(demo) && demo.contacts.length > 0,
+  },
   {
     key: "noEmail",
     label: "Needs an email address",
-    test: (demo) => !demo.contact_email,
+    test: (demo) => !isDeclined(demo) && !demo.contact_email,
   },
+  { key: "declined", label: "Not interested", test: isDeclined },
 ];
 
 function shotUrl(code, id, kind) {
@@ -195,6 +208,7 @@ export default function Review() {
   const viewedCount = demos.filter((demo) => demo.view_count > 0).length;
   const readyCount = demos.filter((demo) => demo.ready_to_email).length;
   const contactedCount = demos.filter((demo) => demo.contacts.length > 0).length;
+  const declinedCount = demos.filter(isDeclined).length;
   const openNoteCount = demos.reduce(
     (total, demo) =>
       total + demo.notes.filter((note) => !note.resolved_at).length,
@@ -210,6 +224,7 @@ export default function Review() {
           <p className="review-summary">
             {demos.length} concepts · {activeCount} active · {viewedCount}{" "}
             opened by a client · {readyCount} ready to email · {contactedCount} contacted ·{" "}
+            {declinedCount} not interested ·{" "}
             {openNoteCount} open {openNoteCount === 1 ? "note" : "notes"}
           </p>
         </div>
@@ -253,7 +268,13 @@ export default function Review() {
         {visible.map((demo) => (
           <li
             key={demo.id}
-            className={`review-card${demo.ready_to_email ? " review-card-ready" : ""}`}
+            className={`review-card${
+              isDeclined(demo)
+                ? " review-card-declined"
+                : demo.ready_to_email
+                  ? " review-card-ready"
+                  : ""
+            }`}
           >
             <div className="review-card-head">
               <Logo demo={demo} code={accessCode} />
@@ -321,36 +342,40 @@ export default function Review() {
 
             <ConceptNotes demo={demo} onAction={runAction} />
 
-            <label className="review-ready">
-              <input
-                type="checkbox"
-                checked={demo.ready_to_email}
-                onChange={(event) => {
-                  const ready = event.target.checked;
-                  // Show the change right away; the server reply confirms it
-                  setDemos((current) =>
-                    current.map((item) =>
-                      item.id === demo.id
-                        ? { ...item, ready_to_email: ready, ready_at: new Date().toISOString() }
-                        : item
-                    )
-                  );
-                  runAction({ action: "setReady", demoId: demo.id, ready });
-                }}
-              />
-              <span>
-                <strong>Ready to email the client</strong>
-                <small>
-                  {demo.ready_to_email
-                    ? `Marked ${formatDate(demo.ready_at)}. Nothing is sent until you press Send.`
-                    : "Check when this concept is finished. Nothing is sent automatically."}
-                </small>
-              </span>
-            </label>
+            {!isDeclined(demo) && (
+              <label className="review-ready">
+                <input
+                  type="checkbox"
+                  checked={demo.ready_to_email}
+                  onChange={(event) => {
+                    const ready = event.target.checked;
+                    // Show the change right away; the server reply confirms it
+                    setDemos((current) =>
+                      current.map((item) =>
+                        item.id === demo.id
+                          ? { ...item, ready_to_email: ready, ready_at: new Date().toISOString() }
+                          : item
+                      )
+                    );
+                    runAction({ action: "setReady", demoId: demo.id, ready });
+                  }}
+                />
+                <span>
+                  <strong>Ready to email the client</strong>
+                  <small>
+                    {demo.ready_to_email
+                      ? `Marked ${formatDate(demo.ready_at)}. Nothing is sent until you press Send.`
+                      : "Check when this concept is finished. Nothing is sent automatically."}
+                  </small>
+                </span>
+              </label>
+            )}
 
             <Outreach demo={demo} onAction={runAction} />
 
-            <EmailPanel demo={demo} onAction={runAction} />
+            {!isDeclined(demo) && <EmailPanel demo={demo} onAction={runAction} />}
+
+            <NotInterested demo={demo} onAction={runAction} />
           </li>
         ))}
       </ul>
