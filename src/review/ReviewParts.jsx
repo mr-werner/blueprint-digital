@@ -422,3 +422,79 @@ export function Outreach({ demo, onAction }) {
     </section>
   );
 }
+
+// For a business that replied "no thanks"; moves the card to the Not interested tab
+export function NotInterested({ demo, onAction }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function mark(notInterested, body = "") {
+    setBusy(true);
+    const ok = await onAction({
+      action: "setNotInterested",
+      demoId: demo.id,
+      notInterested,
+      body,
+    });
+    setBusy(false);
+    if (ok) {
+      setOpen(false);
+      setReason("");
+    }
+  }
+
+  if (demo.not_interested_at) {
+    return (
+      <section className="review-declined" aria-label="Not interested">
+        <p>
+          <strong>Not interested</strong> · marked {formatDate(demo.not_interested_at)}
+        </p>
+        {demo.not_interested_note && (
+          <p className="review-declined-note">{demo.not_interested_note}</p>
+        )}
+        <button type="button" disabled={busy} onClick={() => mark(false)}>
+          {busy ? "Saving…" : "Undo"}
+        </button>
+      </section>
+    );
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        className="review-decline-button"
+        onClick={() => setOpen(true)}
+      >
+        Not interested
+      </button>
+    );
+  }
+
+  return (
+    <form
+      className="review-decline-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        mark(true, reason);
+      }}
+    >
+      <input
+        type="text"
+        maxLength={500}
+        value={reason}
+        onChange={(event) => setReason(event.target.value)}
+        placeholder="What did they say? (optional)"
+        aria-label={`Why ${demo.business_name} isn't interested`}
+        autoFocus
+      />
+      <button type="submit" disabled={busy}>
+        {busy ? "Saving…" : "Mark not interested"}
+      </button>
+      <button type="button" onClick={() => setOpen(false)}>
+        Cancel
+      </button>
+    </form>
+  );
+}

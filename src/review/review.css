@@ -985,3 +985,93 @@ p {
   display: block;
   color: var(--muted);
 }
+
+/* Not interested */
+
+.review-card-declined {
+  border-style: dashed;
+  background: var(--off-white);
+}
+
+.review-card-declined .review-previews {
+  opacity: 0.7;
+}
+
+.review-decline-button {
+  align-self: flex-start;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.review-decline-button:hover {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+
+.review-decline-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.review-decline-form input {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13.5px;
+}
+
+.review-decline-form button,
+.review-declined button {
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.review-decline-form button[type="submit"] {
+  border-color: var(--amber);
+  background: var(--amber);
+  color: var(--white);
+}
+
+.review-declined {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--amber-soft);
+  color: var(--amber);
+  font-size: 13.5px;
+}
+
+.review-declined p {
+  margin: 0;
+}
+
+.review-declined-note {
+  flex-basis: 100%;
+  order: 1;
+  color: var(--text);
+}
+
+.review-declined button {
+  margin-left: auto;
+}
