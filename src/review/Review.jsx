@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { formatDate, methodLabel } from "./format.js";
 import {
+  ClientPortal,
   ContactInfo,
   EmailPanel,
   Logo,
@@ -347,6 +348,8 @@ export default function Review() {
                 </small>
               </span>
             </label>
+
+            <ClientPortal demo={demo} onAction={runAction} />
 
             <Outreach demo={demo} onAction={runAction} />
 

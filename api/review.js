@@ -7,6 +7,9 @@ const EMAIL_FROM = "Justin · Blueprint WebStudio <hello@blueprintwebstudio.com>
 const STUDIO_INBOX = "hello@blueprintwebstudio.com";
 const EMAIL_PATTERN = /^[^\s@<>,;]+@[^\s@<>,;]+\.[a-z]{2,}$/i;
 const CONTACT_METHODS = ["email", "phone", "form"];
+const REQUEST_STATUSES = ["new", "in_progress", "done", "declined"];
+const INVOICE_STATUSES = ["draft", "open", "paid", "void"];
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 // Bracketed lowercase phrases like "[studio mailing address]" are draft
 // placeholders. Uppercase tokens like "[GEOTITLE]" are quoted from client sites.
@@ -88,7 +91,8 @@ async function loadDemos(sql) {
       email_body,
       emailed_at,
       emailed_to,
-      contact_form_url
+      contact_form_url,
+      portal_enabled
     FROM demos
     WHERE is_admin = false
     ORDER BY created_at DESC, id DESC
@@ -111,6 +115,29 @@ async function loadDemos(sql) {
     ORDER BY c.contacted_at ASC NULLS FIRST, c.id ASC
   `;
 
+  // Client portal: accounts, change requests and invoices per site
+  const accounts = await sql`
+    SELECT id, demo_id, name, email, created_at, last_login_at
+    FROM client_accounts
+    WHERE disabled_at IS NULL
+    ORDER BY created_at ASC
+  `;
+
+  const requests = await sql`
+    SELECT r.id, r.demo_id, r.page, r.body, r.priority, r.status, r.studio_reply,
+           r.created_at, r.completed_at, a.name AS author
+    FROM change_requests r
+    LEFT JOIN client_accounts a ON a.id = r.account_id
+    ORDER BY r.created_at DESC, r.id DESC
+  `;
+
+  const invoices = await sql`
+    SELECT id, demo_id, number, description, amount_cents, status,
+           issued_on, due_on, paid_on, payment_url
+    FROM invoices
+    ORDER BY issued_on DESC, id DESC
+  `;
+
   const groupByDemo = (rows) => {
     const grouped = new Map();
     for (const row of rows) {
@@ -122,11 +149,17 @@ async function loadDemos(sql) {
   };
   const notesByDemo = groupByDemo(notes);
   const contactsByDemo = groupByDemo(contacts);
+  const accountsByDemo = groupByDemo(accounts);
+  const requestsByDemo = groupByDemo(requests);
+  const invoicesByDemo = groupByDemo(invoices);
 
   return demos.map((demo) => ({
     ...demo,
     notes: notesByDemo.get(String(demo.id)) ?? [],
     contacts: contactsByDemo.get(String(demo.id)) ?? [],
+    accounts: accountsByDemo.get(String(demo.id)) ?? [],
+    requests: requestsByDemo.get(String(demo.id)) ?? [],
+    invoices: invoicesByDemo.get(String(demo.id)) ?? [],
   }));
 }
 
@@ -156,6 +189,12 @@ export default async function handler(req, res) {
       to,
       subject,
       sendAgain,
+      enabled,
+      requestId,
+      status,
+      reply,
+      invoiceId,
+      invoice,
     } = req.body ?? {};
 
     // Make sure a review code was provided
@@ -357,6 +396,70 @@ export default async function handler(req, res) {
       await sql`
         INSERT INTO demo_contacts (demo_id, method, contacted_at, note)
         VALUES (${id}, 'email', NOW(), ${`Sent from the review page to ${recipient}`})
+      `;
+    } else if (action === "setPortal") {
+      // Lets this client create an account with their access code
+      const id = toId(demoId);
+      if (!id) return fail(res, 400, "Concept not found.");
+
+      await sql`
+        UPDATE demos SET portal_enabled = ${Boolean(enabled)}
+        WHERE id = ${id} AND is_admin = false
+      `;
+    } else if (action === "updateRequest") {
+      const id = toId(requestId);
+      if (!id) return fail(res, 400, "Request not found.");
+      if (!REQUEST_STATUSES.includes(status)) return fail(res, 400, "Pick a status.");
+      const replyText = typeof reply === "string" ? reply.trim().slice(0, 2000) : "";
+
+      await sql`
+        UPDATE change_requests
+        SET
+          status = ${status},
+          studio_reply = ${replyText || null},
+          updated_at = NOW(),
+          picked_up_at = CASE WHEN ${status} = 'new' THEN NULL ELSE COALESCE(picked_up_at, NOW()) END,
+          completed_at = CASE WHEN ${status} IN ('done', 'declined') THEN COALESCE(completed_at, NOW()) ELSE NULL END
+        WHERE id = ${id}
+      `;
+    } else if (action === "addInvoice") {
+      const id = toId(demoId);
+      if (!id) return fail(res, 400, "Concept not found.");
+
+      const number = String(invoice?.number ?? "").trim().slice(0, 40);
+      const description = String(invoice?.description ?? "").trim().slice(0, 200);
+      const amount = Math.round(Number(invoice?.amount) * 100);
+      const invoiceStatus = INVOICE_STATUSES.includes(invoice?.status) ? invoice.status : "open";
+      const issuedOn = DATE_PATTERN.test(invoice?.issuedOn ?? "") ? invoice.issuedOn : null;
+      const dueOn = DATE_PATTERN.test(invoice?.dueOn ?? "") ? invoice.dueOn : null;
+      const paymentUrl = String(invoice?.paymentUrl ?? "").trim();
+
+      if (!number || !description) return fail(res, 400, "Add an invoice number and description.");
+      if (!Number.isSafeInteger(amount) || amount < 0) return fail(res, 400, "Enter the amount in dollars.");
+      if (paymentUrl && !/^https:\/\/\S+$/i.test(paymentUrl)) {
+        return fail(res, 400, "The payment link should start with https://");
+      }
+
+      await sql`
+        INSERT INTO invoices (demo_id, number, description, amount_cents, status, issued_on, due_on, paid_on, payment_url)
+        VALUES (
+          ${id}, ${number}, ${description}, ${amount}, ${invoiceStatus},
+          COALESCE(${issuedOn}::date, CURRENT_DATE), ${dueOn}::date,
+          CASE WHEN ${invoiceStatus} = 'paid' THEN CURRENT_DATE END,
+          ${paymentUrl || null}
+        )
+      `;
+    } else if (action === "setInvoiceStatus") {
+      const id = toId(invoiceId);
+      if (!id) return fail(res, 400, "Invoice not found.");
+      if (!INVOICE_STATUSES.includes(status)) return fail(res, 400, "Pick a status.");
+
+      await sql`
+        UPDATE invoices
+        SET
+          status = ${status},
+          paid_on = CASE WHEN ${status} = 'paid' THEN COALESCE(paid_on, CURRENT_DATE) ELSE NULL END
+        WHERE id = ${id}
       `;
     } else if (action !== "list") {
       return fail(res, 400, "Unknown action.");
