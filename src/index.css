@@ -4589,7 +4589,7 @@ button.demo-modal-close:hover {
 }
 
 /* Icon only on narrower desktops so the centered nav keeps its room */
-@media (max-width: 1279px) {
+@media (max-width: 1399px) {
   .client-menu-label {
     display: none;
   }
@@ -4628,4 +4628,30 @@ button.demo-modal-close:hover {
   height: 16px;
   flex: 0 0 16px;
   color: #5f7d9c;
+}
+
+/* The mobile menu carries the client links below desktop widths */
+@media (max-width: 1000px) {
+  .client-menu {
+    display: none;
+  }
+}
+
+/* On phones the header only has room for the logo and menu button;
+   Start Your Project and the demo code link live in the menu */
+@media (max-width: 640px) {
+  .header-cta-group {
+    display: none;
+  }
+}
+
+/* Small desktops: tighten the nav so it clears the client button */
+@media (min-width: 1001px) and (max-width: 1179px) {
+  .desktop-nav {
+    gap: 28px;
+  }
+
+  .header-cta-group {
+    right: 4vw;
+  }
 }
