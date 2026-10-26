@@ -985,3 +985,80 @@ p {
   display: block;
   color: var(--muted);
 }
+
+/* Client portal panel */
+
+.review-portal-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.review-portal-accounts {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.review-portal-edit,
+.review-invoice-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.review-portal-edit input,
+.review-portal-edit select,
+.review-invoice-form input,
+.review-invoice-form select,
+.review-invoice-list select {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  font: inherit;
+  font-size: 13px;
+}
+
+.review-portal-edit input {
+  flex: 1 1 180px;
+}
+
+.review-portal-edit button,
+.review-invoice-form button {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--blue);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--blue);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.review-portal-edit button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.review-invoice-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  font-size: 13px;
+}
+
+.review-invoice-list li {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.review-invoice-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}

@@ -422,3 +422,229 @@ export function Outreach({ demo, onAction }) {
     </section>
   );
 }
+
+const REQUEST_STATUS_OPTIONS = [
+  { key: "new", label: "New" },
+  { key: "in_progress", label: "In progress" },
+  { key: "done", label: "Done" },
+  { key: "declined", label: "Not planned" },
+];
+
+const INVOICE_STATUS_OPTIONS = [
+  { key: "draft", label: "Draft (hidden from client)" },
+  { key: "open", label: "Due" },
+  { key: "paid", label: "Paid" },
+  { key: "void", label: "Void" },
+];
+
+function dollars(cents) {
+  return (cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" });
+}
+
+function RequestItem({ request, onAction }) {
+  const [status, setStatus] = useState(request.status);
+  const [reply, setReply] = useState(request.studio_reply || "");
+  const [saving, setSaving] = useState(false);
+  const changed = status !== request.status || reply !== (request.studio_reply || "");
+
+  async function save() {
+    setSaving(true);
+    await onAction({ action: "updateRequest", requestId: request.id, status, reply });
+    setSaving(false);
+  }
+
+  return (
+    <li className={`review-note${["done", "declined"].includes(request.status) ? " review-note-done" : ""}`}>
+      <p className="review-note-body">{request.body}</p>
+      <div className="review-note-meta">
+        <span>
+          #{request.id} · {request.page || "Whole site"} · {request.priority} priority ·{" "}
+          {formatDate(request.created_at)}
+          {request.author && ` · ${request.author}`}
+        </span>
+      </div>
+      <div className="review-portal-edit">
+        <select
+          value={status}
+          onChange={(event) => setStatus(event.target.value)}
+          aria-label={`Status of request ${request.id}`}
+        >
+          {REQUEST_STATUS_OPTIONS.map(({ key, label }) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <input
+          type="text"
+          value={reply}
+          maxLength={2000}
+          onChange={(event) => setReply(event.target.value)}
+          placeholder="Reply the client will see (optional)"
+          aria-label={`Reply to request ${request.id}`}
+        />
+        <button type="button" onClick={save} disabled={saving || !changed}>
+          {saving ? "Saving…" : "Save"}
+        </button>
+      </div>
+    </li>
+  );
+}
+
+function InvoiceForm({ demo, onAction }) {
+  const blank = { number: "", description: "", amount: "", dueOn: "", status: "open", paymentUrl: "" };
+  const [invoice, setInvoice] = useState(blank);
+  const [saving, setSaving] = useState(false);
+  const set = (key) => (event) => setInvoice({ ...invoice, [key]: event.target.value });
+
+  async function submit(event) {
+    event.preventDefault();
+    setSaving(true);
+    const ok = await onAction({ action: "addInvoice", demoId: demo.id, invoice });
+    setSaving(false);
+    if (ok) setInvoice(blank);
+  }
+
+  return (
+    <form className="review-invoice-form" onSubmit={submit}>
+      <input value={invoice.number} onChange={set("number")} placeholder="Invoice #" aria-label="Invoice number" required />
+      <input
+        value={invoice.description}
+        onChange={set("description")}
+        placeholder="Description, e.g. Website build deposit"
+        aria-label="Invoice description"
+        required
+      />
+      <input
+        type="number"
+        min="0"
+        step="0.01"
+        value={invoice.amount}
+        onChange={set("amount")}
+        placeholder="Amount ($)"
+        aria-label="Amount in dollars"
+        required
+      />
+      <input type="date" value={invoice.dueOn} onChange={set("dueOn")} aria-label="Due date" />
+      <select value={invoice.status} onChange={set("status")} aria-label="Invoice status">
+        {INVOICE_STATUS_OPTIONS.map(({ key, label }) => (
+          <option key={key} value={key}>
+            {label}
+          </option>
+        ))}
+      </select>
+      <input
+        type="url"
+        value={invoice.paymentUrl}
+        onChange={set("paymentUrl")}
+        placeholder="Payment link (optional)"
+        aria-label="Payment link"
+      />
+      <button type="submit" disabled={saving}>
+        {saving ? "Adding…" : "Add invoice"}
+      </button>
+    </form>
+  );
+}
+
+export function ClientPortal({ demo, onAction }) {
+  const openRequests = demo.requests.filter((request) => ["new", "in_progress"].includes(request.status));
+  const closedRequests = demo.requests.filter((request) => !["new", "in_progress"].includes(request.status));
+
+  return (
+    <section className="review-notes" aria-label={`Client portal for ${demo.business_name}`}>
+      <h3>
+        Client portal
+        {openRequests.length > 0 && (
+          <span className="review-notes-count">
+            {openRequests.length} open {openRequests.length === 1 ? "request" : "requests"}
+          </span>
+        )}
+      </h3>
+
+      <label className="review-portal-toggle">
+        <input
+          type="checkbox"
+          checked={demo.portal_enabled}
+          onChange={(event) => onAction({ action: "setPortal", demoId: demo.id, enabled: event.target.checked })}
+        />
+        <span>
+          Client can sign up at <a href="/portal" target="_blank" rel="noreferrer">/portal</a> with code{" "}
+          {demo.demo_code}
+        </span>
+      </label>
+
+      {demo.portal_enabled && (
+        <>
+          <p className="review-portal-accounts">
+            {demo.accounts.length === 0
+              ? "No one has signed up yet."
+              : demo.accounts
+                  .map(
+                    (account) =>
+                      `${account.name} (${account.email})${
+                        account.last_login_at ? `, last in ${formatDate(account.last_login_at)}` : ""
+                      }`
+                  )
+                  .join(" · ")}
+          </p>
+
+          {openRequests.length > 0 && <ul className="review-note-list">{openRequests.map((request) => (
+            <RequestItem key={`${request.id}-${request.status}-${request.studio_reply}`} request={request} onAction={onAction} />
+          ))}</ul>}
+
+          {closedRequests.length > 0 && (
+            <details className="review-notes-done">
+              <summary>
+                {closedRequests.length} closed {closedRequests.length === 1 ? "request" : "requests"}
+              </summary>
+              <ul className="review-note-list">
+                {closedRequests.map((request) => (
+                  <RequestItem key={`${request.id}-${request.status}-${request.studio_reply}`} request={request} onAction={onAction} />
+                ))}
+              </ul>
+            </details>
+          )}
+
+          <details className="review-notes-done">
+            <summary>
+              Invoices ({demo.invoices.length}
+              {demo.invoices.some((item) => item.status === "open") &&
+                `, ${dollars(
+                  demo.invoices
+                    .filter((item) => item.status === "open")
+                    .reduce((total, item) => total + item.amount_cents, 0)
+                )} due`}
+              )
+            </summary>
+            {demo.invoices.length > 0 && (
+              <ul className="review-invoice-list">
+                {demo.invoices.map((item) => (
+                  <li key={item.id}>
+                    <span>
+                      #{item.number} · {item.description} · {dollars(item.amount_cents)}
+                    </span>
+                    <select
+                      value={item.status}
+                      onChange={(event) =>
+                        onAction({ action: "setInvoiceStatus", invoiceId: item.id, status: event.target.value })
+                      }
+                      aria-label={`Status of invoice ${item.number}`}
+                    >
+                      {INVOICE_STATUS_OPTIONS.map(({ key, label }) => (
+                        <option key={key} value={key}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <InvoiceForm demo={demo} onAction={onAction} />
+          </details>
+        </>
+      )}
+    </section>
+  );
+}
