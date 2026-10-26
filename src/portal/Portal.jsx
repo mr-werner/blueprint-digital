@@ -59,6 +59,18 @@ function formatDate(value) {
   return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
+// "Today", "Yesterday" or "Oct 21", short enough for a stat tile
+function shortDay(value) {
+  if (!value) return "–";
+  const date = new Date(value);
+  const days = Math.round(
+    (new Date().setHours(0, 0, 0, 0) - new Date(value).setHours(0, 0, 0, 0)) / 86400000
+  );
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function hostOf(url) {
   try {
     return new URL(url).host.replace(/^www\./, "");
@@ -208,10 +220,7 @@ function Stats({ stats }) {
         <StatTile label="Page views" value={totals.visits.toLocaleString()} />
         <StatTile label="Visitors" value={totals.visitors.toLocaleString()} note="Counted once per day" />
         <StatTile label="On a phone" value={totals.visits ? `${mobileShare}%` : "–"} />
-        <StatTile
-          label="Last visit"
-          value={totals.last_visit ? formatDate(totals.last_visit) : "–"}
-        />
+        <StatTile label="Last visit" value={shortDay(totals.last_visit)} />
       </div>
 
       <VisitsChart daily={daily} />
@@ -474,7 +483,7 @@ export default function Portal() {
   // A saved session cookie skips the sign-in screen
   useEffect(() => {
     callPortal({ action: "me" }).then((result) => {
-      if (result.data) setData(result.data);
+      if (result.data?.site) setData(result.data);
       setChecking(false);
     });
   }, []);

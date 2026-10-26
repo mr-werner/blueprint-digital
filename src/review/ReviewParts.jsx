@@ -556,7 +556,9 @@ export function ClientPortal({ demo, onAction }) {
       <h3>
         Client portal
         {openRequests.length > 0 && (
-          <span className="review-notes-count">{openRequests.length} open requests</span>
+          <span className="review-notes-count">
+            {openRequests.length} open {openRequests.length === 1 ? "request" : "requests"}
+          </span>
         )}
       </h3>
 

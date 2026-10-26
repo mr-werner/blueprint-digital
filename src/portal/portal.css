@@ -146,6 +146,7 @@ a {
 .portal-ghost-button,
 .portal-link-button {
   height: 38px;
+  white-space: nowrap;
   padding: 0 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -302,8 +303,12 @@ a {
 }
 
 .portal-brand img {
-  width: 34px;
-  height: auto;
+  width: 36px;
+  height: 36px;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--white);
+  object-fit: contain;
 }
 
 .portal-header-side {
@@ -717,5 +722,10 @@ a {
 
   .portal-row {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* The chart scales down with the screen, so its text is drawn larger */
+  .portal-chart-label {
+    font-size: 22px;
   }
 }

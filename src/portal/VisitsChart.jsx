@@ -2,7 +2,7 @@ import { useState } from "react";
 
 const WIDTH = 720;
 const HEIGHT = 200;
-const PAD = { top: 12, right: 8, bottom: 26, left: 32 };
+const PAD = { top: 12, right: 8, bottom: 26, left: 44 };
 const GAP = 2;
 
 function dayLabel(day) {

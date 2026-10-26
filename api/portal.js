@@ -223,6 +223,8 @@ export default async function handler(req, res) {
     const account = await currentAccount(sql, req);
     if (!account) {
       res.setHeader("Set-Cookie", clearedCookie());
+      // Opening the page signed out is normal, so it isn't an error
+      if (action === "me") return res.status(200).json({ success: true, signedIn: false });
       return fail(res, 401, "Please sign in.");
     }
 
