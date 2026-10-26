@@ -104,6 +104,15 @@ const Icon = ({ name }) => {
 
     ),
 
+    user: (
+      <>
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7" />
+      </>
+    ),
+
+    chevron: <path d="M6 9l6 6 6-6" />,
+
     key: (
 
       <>
@@ -153,6 +162,62 @@ const Icon = ({ name }) => {
 };
 
 
+
+// Header button that opens a small menu into the client portal
+function ClientMenu() {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+
+  // Close on an outside click or Escape
+  useEffect(() => {
+    if (!open) return undefined;
+    const onPointer = (event) => {
+      if (!menuRef.current?.contains(event.target)) setOpen(false);
+    };
+    const onKey = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onPointer);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onPointer);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className="client-menu" ref={menuRef}>
+      <button
+        type="button"
+        className="client-menu-button"
+        aria-haspopup="true"
+        aria-expanded={open}
+        aria-label="Client portal: sign in or create an account"
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Icon name="user" />
+        <span className="client-menu-label">Client Login</span>
+        <Icon name="chevron" />
+      </button>
+
+      {open && (
+        <div className="client-menu-panel">
+          <p className="client-menu-kicker">Client portal</p>
+          <p className="client-menu-text">
+            Site stats, invoices and change requests in one place.
+          </p>
+          <a href="/portal/" className="client-menu-primary">
+            Sign in
+          </a>
+          <a href="/portal/?mode=signup" className="client-menu-secondary">
+            Create an account
+          </a>
+          <p className="client-menu-note">New accounts need the access code we sent you.</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function App() {
 
@@ -445,9 +510,13 @@ export default function App() {
       </nav>
 
       <div className="header-cta-group">
-          <a href="#contact" className="nav-button">
-            Start Your Project
-          </a>
+          <div className="header-cta-row">
+            <ClientMenu />
+
+            <a href="#contact" className="nav-button">
+              Start Your Project
+            </a>
+          </div>
 
           <button
             type="button"
@@ -598,6 +667,15 @@ export default function App() {
           <span>Already Have a Demo Code?</span>
         </button>
 
+        <div className="mobile-client-links">
+          <a href="/portal/" onClick={() => setMenuOpen(false)}>
+            <Icon name="user" />
+            <span>Client sign in</span>
+          </a>
+          <a href="/portal/?mode=signup" onClick={() => setMenuOpen(false)}>
+            Create an account
+          </a>
+        </div>
         <a
           href="#contact"
           className="mobile-project-button"

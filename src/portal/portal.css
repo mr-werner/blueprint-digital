@@ -361,12 +361,6 @@ a {
   flex-shrink: 0;
 }
 
-.portal-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
-}
-
 .portal-card {
   min-width: 0;
   padding: 24px;
@@ -376,14 +370,6 @@ a {
   display: flex;
   flex-direction: column;
   gap: 18px;
-}
-
-.portal-span-2 {
-  grid-column: span 2;
-}
-
-.portal-span-3 {
-  grid-column: 1 / -1;
 }
 
 .portal-card-head {
@@ -684,15 +670,98 @@ a {
   text-align: center;
 }
 
+/* Dashboard tabs */
+
+.portal-tabbar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 20px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--white);
+}
+
+.portal-tabbar button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.portal-tabbar button:hover {
+  background: var(--off-white);
+}
+
+.portal-tabbar button.is-active {
+  background: var(--navy);
+  color: var(--white);
+}
+
+.portal-tabbar button:focus-visible {
+  outline: 2px solid var(--blue-bright);
+  outline-offset: 2px;
+}
+
+.portal-tab-label {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.portal-tab-summary {
+  color: var(--muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.portal-tabbar button.is-active .portal-tab-summary {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.portal-panel > .portal-card {
+  min-height: 320px;
+}
+
+/* Sign-in extras */
+
+.portal-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.portal-gate-card .portal-label-row label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.portal-inline-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--blue);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.portal-inline-link:hover {
+  text-decoration: underline;
+}
+
 @media (max-width: 980px) {
-  .portal-grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .portal-span-2 {
-    grid-column: auto;
-  }
-
   .portal-requests {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -722,6 +791,18 @@ a {
 
   .portal-row {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .portal-tabbar button {
+    padding: 10px;
+  }
+
+  .portal-tab-label {
+    font-size: 13px;
+  }
+
+  .portal-tab-summary {
+    font-size: 11px;
   }
 
   /* The chart scales down with the screen, so its text is drawn larger */

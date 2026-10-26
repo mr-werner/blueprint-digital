@@ -79,10 +79,54 @@ function hostOf(url) {
   }
 }
 
+// Links can open a specific screen: ?mode=signup, or ?reset=<token> from a reset email
+function initialAuthState() {
+  const params = new URLSearchParams(window.location.search);
+  const resetToken = params.get("reset") || "";
+  if (resetToken) return { mode: "reset", resetToken };
+  return { mode: params.get("mode") === "signup" ? "signup" : "signin", resetToken: "" };
+}
+
+// Drops ?reset=… from the address bar so the token isn't left in history
+function clearQuery() {
+  try {
+    window.history.replaceState(null, "", window.location.pathname);
+  } catch {
+    // Older browsers keep the query; nothing breaks
+  }
+}
+
+// A reset link opens the new-password form even if this browser is signed in
+const OPENED_FROM_RESET = new URLSearchParams(window.location.search).has("reset");
+
+const AUTH_COPY = {
+  signin: {
+    title: "Welcome back",
+    text: "Sign in to see your site's visits, invoices and change requests.",
+    button: "Sign in",
+  },
+  signup: {
+    title: "Create your account",
+    text: "Use the access code we sent with your website to link your account to it.",
+    button: "Create account",
+  },
+  forgot: {
+    title: "Reset your password",
+    text: "Enter the email you signed up with and we'll send you a link to choose a new password.",
+    button: "Email me a reset link",
+  },
+  reset: {
+    title: "Choose a new password",
+    text: "Pick a new password for your client portal account.",
+    button: "Save new password",
+  },
+};
+
 function AuthScreen({ onSignedIn }) {
-  const [mode, setMode] = useState("signin");
+  const [{ mode, resetToken }, setAuth] = useState(initialAuthState);
   const [form, setForm] = useState({ code: "", name: "", email: "", password: "" });
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
   const update = (key) => (event) => {
@@ -90,50 +134,71 @@ function AuthScreen({ onSignedIn }) {
     setError("");
   };
 
+  function switchMode(next) {
+    setAuth({ mode: next, resetToken: "" });
+    setError("");
+    setNotice("");
+    if (resetToken) clearQuery();
+  }
+
   async function submit(event) {
     event.preventDefault();
     setBusy(true);
     setError("");
-    const result = await callPortal({ action: mode, ...form });
+    setNotice("");
+
+    let payload = { action: mode, ...form };
+    if (mode === "forgot") payload = { action: "requestReset", email: form.email };
+    if (mode === "reset") payload = { action: "resetPassword", token: resetToken, password: form.password };
+
+    const result = await callPortal(payload);
     setBusy(false);
-    if (result.data) onSignedIn(result.data);
-    else setError(result.error);
+
+    if (!result.data) {
+      setError(result.error);
+      return;
+    }
+    if (mode === "forgot") {
+      setNotice(result.data.message);
+      return;
+    }
+    if (mode === "reset") clearQuery();
+    onSignedIn(result.data);
   }
 
   const signingUp = mode === "signup";
+  const needsEmail = mode !== "reset";
+  const needsPassword = mode !== "forgot";
+  const newPassword = signingUp || mode === "reset";
+  const copy = AUTH_COPY[mode];
 
   return (
     <main className="portal-gate">
       <form className="portal-gate-card" onSubmit={submit}>
         <img src="/blueprint-webstudio-logo-text.png" alt="Blueprint WebStudio" className="portal-gate-logo" />
         <p className="portal-kicker">Client portal</p>
-        <h1>{signingUp ? "Create your account" : "Welcome back"}</h1>
-        <p className="portal-muted">
-          {signingUp
-            ? "Use the access code we sent with your website to link your account to it."
-            : "Sign in to see your site's visits, invoices and change requests."}
-        </p>
+        <h1>{copy.title}</h1>
+        <p className="portal-muted">{copy.text}</p>
 
-        <div className="portal-tabs" role="tablist" aria-label="Sign in or create an account">
-          {[
-            ["signin", "Sign in"],
-            ["signup", "Create account"],
-          ].map(([key, label]) => (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={mode === key}
-              className={mode === key ? "is-active" : ""}
-              onClick={() => {
-                setMode(key);
-                setError("");
-              }}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+        {(mode === "signin" || signingUp) && (
+          <div className="portal-tabs" role="tablist" aria-label="Sign in or create an account">
+            {[
+              ["signin", "Sign in"],
+              ["signup", "Create account"],
+            ].map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={mode === key}
+                className={mode === key ? "is-active" : ""}
+                onClick={() => switchMode(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {signingUp && (
           <>
@@ -154,42 +219,70 @@ function AuthScreen({ onSignedIn }) {
           </>
         )}
 
-        <label htmlFor="portal-email">Email</label>
-        <input
-          id="portal-email"
-          type="email"
-          autoComplete="email"
-          value={form.email}
-          onChange={update("email")}
-          required
-        />
+        {needsEmail && (
+          <>
+            <label htmlFor="portal-email">Email</label>
+            <input
+              id="portal-email"
+              type="email"
+              autoComplete="email"
+              value={form.email}
+              onChange={update("email")}
+              required
+            />
+          </>
+        )}
 
-        <label htmlFor="portal-password">Password</label>
-        <input
-          id="portal-password"
-          type="password"
-          autoComplete={signingUp ? "new-password" : "current-password"}
-          minLength={signingUp ? 8 : undefined}
-          value={form.password}
-          onChange={update("password")}
-          required
-        />
-        {signingUp && <p className="portal-hint">At least 8 characters.</p>}
+        {needsPassword && (
+          <>
+            <div className="portal-label-row">
+              <label htmlFor="portal-password">{mode === "reset" ? "New password" : "Password"}</label>
+              {mode === "signin" && (
+                <button type="button" className="portal-inline-link" onClick={() => switchMode("forgot")}>
+                  Forgot password?
+                </button>
+              )}
+            </div>
+            <input
+              id="portal-password"
+              type="password"
+              autoComplete={newPassword ? "new-password" : "current-password"}
+              minLength={newPassword ? 8 : undefined}
+              value={form.password}
+              onChange={update("password")}
+              required
+            />
+            {newPassword && <p className="portal-hint">At least 8 characters.</p>}
+          </>
+        )}
 
         {error && (
           <p className="portal-error" role="alert">
             {error}
           </p>
         )}
+        {notice && (
+          <p className="portal-success" role="status">
+            {notice}
+          </p>
+        )}
 
         <button type="submit" className="portal-button" disabled={busy}>
-          {busy ? "One moment…" : signingUp ? "Create account" : "Sign in"}
+          {busy ? "One moment…" : copy.button}
         </button>
 
-        <p className="portal-hint portal-gate-help">
-          {signingUp ? "No access code? " : "Forgot your password? "}
-          Email <a href={`mailto:${STUDIO_EMAIL}`}>{STUDIO_EMAIL}</a> and we'll sort it out.
-        </p>
+        {mode === "forgot" || mode === "reset" ? (
+          <p className="portal-hint portal-gate-help">
+            <button type="button" className="portal-inline-link" onClick={() => switchMode("signin")}>
+              Back to sign in
+            </button>
+          </p>
+        ) : (
+          <p className="portal-hint portal-gate-help">
+            {signingUp ? "No access code? " : "Need a hand? "}
+            Email <a href={`mailto:${STUDIO_EMAIL}`}>{STUDIO_EMAIL}</a>.
+          </p>
+        )}
       </form>
     </main>
   );
@@ -210,7 +303,7 @@ function Stats({ stats }) {
   const mobileShare = totals.visits ? Math.round((totals.mobile / totals.visits) * 100) : 0;
 
   return (
-    <section className="portal-card portal-span-2" aria-labelledby="stats-title">
+    <section className="portal-card" aria-labelledby="stats-title">
       <div className="portal-card-head">
         <h2 id="stats-title">Site statistics</h2>
         <p className="portal-muted">Last {days} days</p>
@@ -377,7 +470,7 @@ function Requests({ requests, onAction }) {
   const open = requests.filter((request) => ["new", "in_progress"].includes(request.status)).length;
 
   return (
-    <section className="portal-card portal-span-3" aria-labelledby="requests-title">
+    <section className="portal-card" aria-labelledby="requests-title">
       <div className="portal-card-head">
         <h2 id="requests-title">Change requests</h2>
         <p className="portal-muted">{open === 1 ? "1 open" : `${open} open`}</p>
@@ -428,6 +521,92 @@ function Requests({ requests, onAction }) {
   );
 }
 
+const TABS = [
+  { key: "requests", label: "Change requests" },
+  { key: "financials", label: "Financials" },
+  { key: "stats", label: "Site statistics" },
+];
+
+function readTab() {
+  const key = window.location.hash.slice(1);
+  return TABS.some((tab) => tab.key === key) ? key : TABS[0].key;
+}
+
+// A short figure under each tab name so clients see what's new without opening it
+function tabSummary(key, data) {
+  if (key === "requests") {
+    const open = data.requests.filter((request) => ["new", "in_progress"].includes(request.status)).length;
+    return open ? `${open} open` : "None open";
+  }
+  if (key === "financials") {
+    const due = data.invoices
+      .filter((invoice) => invoice.status === "open")
+      .reduce((total, invoice) => total + invoice.amount_cents, 0);
+    return due ? `${money(due)} due` : "Nothing due";
+  }
+  const views = data.stats.totals.visits;
+  return `${views.toLocaleString()} ${views === 1 ? "view" : "views"}, 30 days`;
+}
+
+function DashboardTabs({ data, onAction }) {
+  const [active, setActive] = useState(readTab);
+
+  // Keeps the open tab in the address so a refresh or the back button lands on it
+  useEffect(() => {
+    const onHash = () => setActive(readTab());
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, []);
+
+  function choose(key) {
+    setActive(key);
+    try {
+      window.history.replaceState(null, "", `#${key}`);
+    } catch {
+      // The tab still switches without updating the address
+    }
+  }
+
+  function onKeyDown(event) {
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[event.key];
+    if (!step) return;
+    event.preventDefault();
+    const index = TABS.findIndex((tab) => tab.key === active);
+    const next = TABS[(index + step + TABS.length) % TABS.length];
+    choose(next.key);
+    document.getElementById(`tab-${next.key}`)?.focus();
+  }
+
+  return (
+    <>
+      <div className="portal-tabbar" role="tablist" aria-label="Dashboard sections" onKeyDown={onKeyDown}>
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            id={`tab-${tab.key}`}
+            type="button"
+            role="tab"
+            aria-selected={active === tab.key}
+            aria-controls={`panel-${tab.key}`}
+            tabIndex={active === tab.key ? 0 : -1}
+            className={active === tab.key ? "is-active" : ""}
+            onClick={() => choose(tab.key)}
+          >
+            <span className="portal-tab-label">{tab.label}</span>
+            <span className="portal-tab-summary">{tabSummary(tab.key, data)}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="portal-panel" id={`panel-${active}`} role="tabpanel" aria-labelledby={`tab-${active}`}>
+        {active === "requests" && <Requests requests={data.requests} onAction={onAction} />}
+        {active === "financials" && <Financials invoices={data.invoices} />}
+        {active === "stats" && <Stats stats={data.stats} />}
+      </div>
+    </>
+  );
+}
+
 function Dashboard({ data, onAction, onSignOut }) {
   const { account, site } = data;
   const firstName = account.name.split(/\s+/)[0];
@@ -460,11 +639,7 @@ function Dashboard({ data, onAction, onSignOut }) {
           </a>
         </section>
 
-        <div className="portal-grid">
-          <Stats stats={data.stats} />
-          <Financials invoices={data.invoices} />
-          <Requests requests={data.requests} onAction={onAction} />
-        </div>
+        <DashboardTabs data={data} onAction={onAction} />
 
         <footer className="portal-footer">
           Questions? Call <a href={`tel:+17205156647`}>{STUDIO_PHONE}</a> or email{" "}
@@ -477,11 +652,12 @@ function Dashboard({ data, onAction, onSignOut }) {
 
 export default function Portal() {
   const [data, setData] = useState(null);
-  const [checking, setChecking] = useState(true);
+  const [checking, setChecking] = useState(!OPENED_FROM_RESET);
   const [notice, setNotice] = useState("");
 
-  // A saved session cookie skips the sign-in screen
+  // A saved session cookie skips the sign-in screen (but not a reset link)
   useEffect(() => {
+    if (OPENED_FROM_RESET) return;
     callPortal({ action: "me" }).then((result) => {
       if (result.data?.site) setData(result.data);
       setChecking(false);
