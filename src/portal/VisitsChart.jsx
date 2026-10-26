@@ -2,7 +2,7 @@ import { useState } from "react";
 
 const WIDTH = 720;
 const HEIGHT = 200;
-const PAD = { top: 12, right: 8, bottom: 26, left: 44 };
+const PAD = { top: 12, right: 8, bottom: 36, left: 44 };
 const GAP = 2;
 
 function dayLabel(day) {
@@ -82,7 +82,7 @@ export default function VisitsChart({ daily }) {
                   tabIndex={0}
                   aria-label={`${dayLabel(row.day)}: ${row.visits} page views`}
                 />
-                {index % 7 === 0 && (
+                {index % 7 === 3 && (
                   <text x={x + barW / 2} y={HEIGHT - 6} textAnchor="middle" className="portal-chart-label">
                     {dayLabel(row.day)}
                   </text>
