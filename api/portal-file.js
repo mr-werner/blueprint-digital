@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { currentAccount } from "../lib/portal-auth.js";
+import { currentAdmin } from "../lib/admin-auth.js";
 
 // Sends one file from the Files tab, only to a signed-in client of the site it belongs to.
 // A file is stored in the row itself (data) or, for larger builds, pinned to a
@@ -23,13 +24,15 @@ export default async function handler(req, res) {
 
   try {
     const sql = neon(connectionString);
-    const account = await currentAccount(sql, req);
-    if (!account) return res.status(401).send("Please sign in to the client portal to download this file.");
+    // The studio can open any client's file from /admin
+    const admin = await currentAdmin(sql, req);
+    const account = admin ? null : await currentAccount(sql, req);
+    if (!admin && !account) return res.status(401).send("Please sign in to the client portal to download this file.");
 
     const rows = await sql`
       SELECT filename, content_type, encode(data, 'base64') AS data, source_url
       FROM client_files
-      WHERE id = ${id} AND demo_id = ${account.demo_id}
+      WHERE id = ${id} AND (${Boolean(admin)} OR demo_id = ${account?.demo_id ?? 0})
     `;
     const file = rows[0];
     if (!file) return res.status(404).send("File not found.");

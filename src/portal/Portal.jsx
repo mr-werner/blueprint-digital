@@ -102,7 +102,7 @@ const OPENED_FROM_RESET = new URLSearchParams(window.location.search).has("reset
 const AUTH_COPY = {
   signin: {
     title: "Welcome back",
-    text: "Sign in to see your site's visits, invoices and change requests.",
+    text: "Sign in to see your project, invoices, documents and change requests.",
     button: "Sign in",
   },
   signup: {
@@ -335,15 +335,215 @@ function Stats({ stats }) {
   );
 }
 
-function Financials({ invoices }) {
+const CONTRACT_LABELS = {
+  draft: "Proposal",
+  sent: "Ready to sign",
+  signed: "Signed",
+  in_progress: "In progress",
+  complete: "Complete",
+};
+
+const MILESTONE_LABELS = { planned: "Upcoming", in_progress: "In progress", done: "Done" };
+
+function projectTotal(contract) {
+  return contract.cost_items.reduce((total, item) => total + item.amount_cents, 0);
+}
+
+function Agreement({ contract, files }) {
+  const total = projectTotal(contract);
+  const agreementFiles = files.filter((file) => file.category === "Agreement");
+  const dates = [
+    contract.signed_on && ["Signed", contract.signed_on],
+    contract.start_on && ["Work starts", contract.start_on],
+    contract.launch_on && ["Target launch", contract.launch_on],
+  ].filter(Boolean);
+
+  return (
+    <section className="portal-card" aria-labelledby="agreement-title">
+      <div className="portal-card-head">
+        <h2 id="agreement-title">Agreement</h2>
+        <span className={`portal-pill portal-pill-contract-${contract.status}`}>
+          {CONTRACT_LABELS[contract.status] ?? contract.status}
+        </span>
+      </div>
+
+      <p className="portal-agreement-title">{contract.title}</p>
+      {contract.summary && <p className="portal-agreement-summary">{contract.summary}</p>}
+
+      {dates.length > 0 && (
+        <dl className="portal-dates">
+          {dates.map(([label, value]) => (
+            <div key={label}>
+              <dt>{label}</dt>
+              <dd>{formatDate(value)}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      <div className="portal-agreement-grid">
+        <div className="portal-agreement-block">
+          <h3 className="portal-subhead">Project cost</h3>
+          {contract.cost_items.length === 0 ? (
+            <p className="portal-empty">The cost breakdown will show here.</p>
+          ) : (
+            <table className="portal-cost-table">
+              <tbody>
+                {contract.cost_items.map((item, index) => (
+                  <tr key={index}>
+                    <th scope="row">
+                      {item.label}
+                      {item.details && <span className="portal-muted portal-small">{item.details}</span>}
+                    </th>
+                    <td className="portal-num">{money(item.amount_cents)}</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr>
+                  <th scope="row">Project total</th>
+                  <td className="portal-num">{money(total)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </div>
+
+        <div className="portal-agreement-block portal-monthly">
+          <h3 className="portal-subhead">{contract.monthly_label || "Monthly support"}</h3>
+          {contract.monthly_cents > 0 ? (
+            <>
+              <p className="portal-monthly-price">
+                <span className="portal-num">{money(contract.monthly_cents)}</span>
+                <span className="portal-muted"> / month</span>
+              </p>
+              {contract.monthly_starts_on && (
+                <p className="portal-muted portal-small">Starts {formatDate(contract.monthly_starts_on)}</p>
+              )}
+              {contract.monthly_includes.length > 0 && (
+                <ul className="portal-checklist">
+                  {contract.monthly_includes.map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              )}
+            </>
+          ) : (
+            <p className="portal-empty">No monthly plan on this agreement.</p>
+          )}
+        </div>
+      </div>
+
+      {contract.payment_terms && (
+        <div className="portal-terms">
+          <h3 className="portal-subhead">Payment terms</h3>
+          <p>{contract.payment_terms}</p>
+        </div>
+      )}
+
+      {agreementFiles.length > 0 && (
+        <p className="portal-agreement-files">
+          {agreementFiles.map((file) => (
+            <a key={file.id} className="portal-link-button" href={`/api/portal-file?id=${file.id}`} download={file.filename}>
+              Download {file.title}
+            </a>
+          ))}
+        </p>
+      )}
+    </section>
+  );
+}
+
+// Deliverables marked done, across the whole timeline
+function deliveryCount(contract) {
+  const all = (contract?.timeline ?? []).flatMap((step) => step.deliverables);
+  return { done: all.filter((entry) => entry.done).length, total: all.length };
+}
+
+function Timeline({ contract }) {
+  if (!contract || contract.timeline.length === 0) {
+    return (
+      <section className="portal-card" aria-labelledby="timeline-title">
+        <div className="portal-card-head">
+          <h2 id="timeline-title">Project timeline</h2>
+        </div>
+        <p className="portal-empty">Your project's milestones and deliverables will show up here once we've agreed on them.</p>
+      </section>
+    );
+  }
+
+  const { done, total } = deliveryCount(contract);
+  const percent = total ? Math.round((done / total) * 100) : 0;
+
+  return (
+    <section className="portal-card" aria-labelledby="timeline-title">
+      <div className="portal-card-head">
+        <h2 id="timeline-title">Project timeline</h2>
+        <p className="portal-muted">
+          {done} of {total} delivered
+        </p>
+      </div>
+
+      <div
+        className="portal-progress"
+        role="progressbar"
+        aria-label="Deliverables completed"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={percent}
+      >
+        <span style={{ width: `${percent}%` }} />
+      </div>
+
+      <ol className="portal-timeline">
+        {contract.timeline.map((step, index) => (
+          <li key={index} className={`portal-step portal-step-${step.status}`}>
+            <span className="portal-step-marker" aria-hidden="true">
+              {step.status === "done" ? "✓" : index + 1}
+            </span>
+            <div className="portal-step-body">
+              <div className="portal-step-head">
+                <h3>{step.title}</h3>
+                <span className={`portal-pill portal-pill-step-${step.status}`}>
+                  {MILESTONE_LABELS[step.status] ?? step.status}
+                </span>
+                {step.due_on && (
+                  <span className="portal-muted portal-small">
+                    Target {formatDate(step.due_on)}
+                  </span>
+                )}
+              </div>
+              {step.details && <p className="portal-step-details">{step.details}</p>}
+              {step.deliverables.length > 0 && (
+                <ul className="portal-deliverables">
+                  {step.deliverables.map((entry, position) => (
+                    <li key={position} className={entry.done ? "is-done" : ""}>
+                      <span aria-hidden="true">{entry.done ? "✓" : ""}</span>
+                      {entry.title}
+                      <span className="portal-visually-hidden">{entry.done ? " (delivered)" : " (not yet)"}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function Financials({ invoices, contract, files }) {
   const due = invoices.filter((invoice) => invoice.status === "open");
   const paid = invoices.filter((invoice) => invoice.status === "paid");
   const sum = (rows) => rows.reduce((total, row) => total + row.amount_cents, 0);
 
   return (
+    <>
+    {contract && <Agreement contract={contract} files={files} />}
     <section className="portal-card" aria-labelledby="money-title">
       <div className="portal-card-head">
-        <h2 id="money-title">Financials</h2>
+        <h2 id="money-title">Invoices</h2>
       </div>
 
       <div className="portal-stats portal-stats-2">
@@ -384,6 +584,7 @@ function Financials({ invoices }) {
         </ul>
       )}
     </section>
+    </>
   );
 }
 
@@ -392,21 +593,25 @@ function fileSize(bytes) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-function Files({ files }) {
+function Downloads({ files }) {
   return (
     <section className="portal-card" aria-labelledby="files-title">
       <div className="portal-card-head">
-        <h2 id="files-title">Files</h2>
+        <h2 id="files-title">Downloads</h2>
+        <p className="portal-muted">Save copies for your records or to share with anyone else</p>
       </div>
 
       {files.length === 0 ? (
-        <p className="portal-empty">No files yet. Anything we hand over for your site will be here to download.</p>
+        <p className="portal-empty">No documents yet. Your agreement, invoices and site files will be here to download.</p>
       ) : (
         <ul className="portal-invoices portal-files">
           {files.map((file) => (
             <li key={file.id}>
               <div>
-                <p className="portal-invoice-title">{file.title}</p>
+                <p className="portal-invoice-title">
+                  {file.title}
+                  {file.category && <span className="portal-tag">{file.category}</span>}
+                </p>
                 <p className="portal-muted portal-small">
                   {file.filename} · {fileSize(file.size_bytes)} · Added {formatDate(file.created_at)}
                 </p>
@@ -562,12 +767,15 @@ function Requests({ requests, onAction }) {
 const TABS = [
   { key: "requests", label: "Change requests" },
   { key: "financials", label: "Financials" },
+  { key: "timeline", label: "Timeline" },
   { key: "stats", label: "Site statistics" },
-  { key: "files", label: "Files" },
+  { key: "downloads", label: "Downloads" },
 ];
 
 function readTab() {
-  const key = window.location.hash.slice(1);
+  // "#files" was the Downloads tab's first name
+  const hash = window.location.hash.slice(1);
+  const key = hash === "files" ? "downloads" : hash;
   return TABS.some((tab) => tab.key === key) ? key : TABS[0].key;
 }
 
@@ -578,14 +786,21 @@ function tabSummary(key, data) {
     return open ? `${open} open` : "None open";
   }
   if (key === "financials") {
+    if (data.contract && !data.invoices.some((invoice) => invoice.status === "open")) {
+      return "Agreement & invoices";
+    }
     const due = data.invoices
       .filter((invoice) => invoice.status === "open")
       .reduce((total, invoice) => total + invoice.amount_cents, 0);
     return due ? `${money(due)} due` : "Nothing due";
   }
-  if (key === "files") {
+  if (key === "timeline") {
+    const { done, total } = deliveryCount(data.contract);
+    return total ? `${done} of ${total} delivered` : "Coming soon";
+  }
+  if (key === "downloads") {
     const count = data.files.length;
-    return count ? `${count} ${count === 1 ? "file" : "files"}` : "None yet";
+    return count ? `${count} ${count === 1 ? "document" : "documents"}` : "None yet";
   }
   const views = data.stats.totals.visits;
   return `${views.toLocaleString()} ${views === 1 ? "view" : "views"}, 30 days`;
@@ -643,9 +858,12 @@ function DashboardTabs({ data, onAction }) {
 
       <div className="portal-panel" id={`panel-${active}`} role="tabpanel" aria-labelledby={`tab-${active}`}>
         {active === "requests" && <Requests requests={data.requests} onAction={onAction} />}
-        {active === "financials" && <Financials invoices={data.invoices} />}
+        {active === "financials" && (
+          <Financials invoices={data.invoices} contract={data.contract} files={data.files} />
+        )}
+        {active === "timeline" && <Timeline contract={data.contract} />}
         {active === "stats" && <Stats stats={data.stats} />}
-        {active === "files" && <Files files={data.files} />}
+        {active === "downloads" && <Downloads files={data.files} />}
       </div>
     </>
   );

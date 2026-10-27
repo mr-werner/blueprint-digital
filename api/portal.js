@@ -94,10 +94,22 @@ async function loadDashboard(sql, account) {
 
   // Only the list here; the file itself comes from /api/portal-file
   const files = await sql`
-    SELECT id, title, filename, size_bytes, note, created_at
+    SELECT id, title, filename, size_bytes, note, category, created_at
     FROM client_files
     WHERE demo_id = ${site.id}
     ORDER BY created_at DESC, id DESC
+  `;
+
+  // The agreement and timeline show once the studio publishes them; private notes never do
+  const contracts = await sql`
+    SELECT title, status, summary, cost_items, payment_terms, monthly_cents, monthly_label,
+           monthly_includes, timeline, updated_at,
+           to_char(signed_on, 'YYYY-MM-DD') AS signed_on,
+           to_char(start_on, 'YYYY-MM-DD') AS start_on,
+           to_char(launch_on, 'YYYY-MM-DD') AS launch_on,
+           to_char(monthly_starts_on, 'YYYY-MM-DD') AS monthly_starts_on
+    FROM contracts
+    WHERE demo_id = ${site.id} AND published = true AND status <> 'cancelled'
   `;
 
   return {
@@ -111,6 +123,7 @@ async function loadDashboard(sql, account) {
     invoices,
     requests,
     files,
+    contract: contracts[0] ?? null,
   };
 }
 

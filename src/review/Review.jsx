@@ -48,7 +48,7 @@ function storeCode(code) {
 export default function Review() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
-  const [loading, setLoading] = useState(() => Boolean(readStoredCode()));
+  const [loading, setLoading] = useState(true);
   const [demos, setDemos] = useState(null);
   const [filter, setFilter] = useState("");
   const [contactFilter, setContactFilter] = useState("all");
@@ -74,8 +74,10 @@ export default function Review() {
         };
       }
 
-      storeCode(submittedCode);
-      return { demos: data.demos, code: submittedCode };
+      // A dashboard sign-in sends the code back, so screenshots and actions use it
+      const accessCode = data.code || submittedCode;
+      if (submittedCode) storeCode(submittedCode);
+      return { demos: data.demos, code: accessCode };
     } catch (lookupError) {
       console.error("Review lookup error:", lookupError);
       return {
@@ -111,10 +113,14 @@ export default function Review() {
     return false;
   }
 
-  // Reopen without retyping the code for the rest of this browser tab
+  // Reopen without retyping the code for the rest of this browser tab, or
+  // straight away when signed in to the studio dashboard
   useEffect(() => {
     const saved = readStoredCode();
-    if (saved) requestDemos(saved).then(applyResult);
+    requestDemos(saved).then((result) => {
+      if (saved || result.demos) applyResult(result);
+      else setLoading(false);
+    });
   }, []);
 
   function handleSubmit(event) {
@@ -174,6 +180,10 @@ export default function Review() {
           <button type="submit" className="review-button" disabled={loading}>
             {loading ? "Checking…" : "Open review page"}
           </button>
+
+          <p className="review-gate-text review-gate-alt">
+            Or <a href="/admin/">sign in to the studio dashboard</a>.
+          </p>
         </form>
       </main>
     );
@@ -223,6 +233,9 @@ export default function Review() {
             onChange={(event) => setFilter(event.target.value)}
             aria-label="Filter concepts"
           />
+          <a className="review-lock" href="/admin/">
+            Dashboard
+          </a>
           <button type="button" className="review-lock" onClick={lock}>
             Lock
           </button>
