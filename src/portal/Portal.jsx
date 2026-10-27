@@ -387,6 +387,44 @@ function Financials({ invoices }) {
   );
 }
 
+function fileSize(bytes) {
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function Files({ files }) {
+  return (
+    <section className="portal-card" aria-labelledby="files-title">
+      <div className="portal-card-head">
+        <h2 id="files-title">Files</h2>
+      </div>
+
+      {files.length === 0 ? (
+        <p className="portal-empty">No files yet. Anything we hand over for your site will be here to download.</p>
+      ) : (
+        <ul className="portal-invoices portal-files">
+          {files.map((file) => (
+            <li key={file.id}>
+              <div>
+                <p className="portal-invoice-title">{file.title}</p>
+                <p className="portal-muted portal-small">
+                  {file.filename} · {fileSize(file.size_bytes)} · Added {formatDate(file.created_at)}
+                </p>
+                {file.note && <p className="portal-small portal-file-note">{file.note}</p>}
+              </div>
+              <div className="portal-invoice-side">
+                <a className="portal-link-button" href={`/api/portal-file?id=${file.id}`} download={file.filename}>
+                  Download
+                </a>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function RequestForm({ onSaved }) {
   const [page, setPage] = useState(PAGE_OPTIONS[0]);
   const [priority, setPriority] = useState("normal");
@@ -525,6 +563,7 @@ const TABS = [
   { key: "requests", label: "Change requests" },
   { key: "financials", label: "Financials" },
   { key: "stats", label: "Site statistics" },
+  { key: "files", label: "Files" },
 ];
 
 function readTab() {
@@ -543,6 +582,10 @@ function tabSummary(key, data) {
       .filter((invoice) => invoice.status === "open")
       .reduce((total, invoice) => total + invoice.amount_cents, 0);
     return due ? `${money(due)} due` : "Nothing due";
+  }
+  if (key === "files") {
+    const count = data.files.length;
+    return count ? `${count} ${count === 1 ? "file" : "files"}` : "None yet";
   }
   const views = data.stats.totals.visits;
   return `${views.toLocaleString()} ${views === 1 ? "view" : "views"}, 30 days`;
@@ -602,6 +645,7 @@ function DashboardTabs({ data, onAction }) {
         {active === "requests" && <Requests requests={data.requests} onAction={onAction} />}
         {active === "financials" && <Financials invoices={data.invoices} />}
         {active === "stats" && <Stats stats={data.stats} />}
+        {active === "files" && <Files files={data.files} />}
       </div>
     </>
   );
