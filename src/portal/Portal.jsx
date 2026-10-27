@@ -896,9 +896,16 @@ function Dashboard({ data, onAction, onSignOut }) {
             <p className="portal-kicker">{site.name}</p>
             <h1>Hi {firstName}, here's how your site is doing.</h1>
           </div>
-          <a className="portal-button portal-site-button" href={site.url} target="_blank" rel="noreferrer">
-            Open {hostOf(site.url)}
-          </a>
+          <div className="portal-hero-actions">
+            {site.editorEnabled && (
+              <a className="portal-button portal-site-button" href="/portal/editor/">
+                Edit my site
+              </a>
+            )}
+            <a className="portal-button portal-site-button" href={site.url} target="_blank" rel="noreferrer">
+              Open {hostOf(site.url)}
+            </a>
+          </div>
         </section>
 
         <DashboardTabs data={data} onAction={onAction} />

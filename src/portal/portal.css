@@ -361,6 +361,12 @@ a {
   flex-shrink: 0;
 }
 
+.portal-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .portal-card {
   min-width: 0;
   padding: 24px;
