@@ -92,6 +92,14 @@ async function loadDashboard(sql, account) {
     ORDER BY r.created_at DESC, r.id DESC
   `;
 
+  // Only the list here; the file itself comes from /api/portal-file
+  const files = await sql`
+    SELECT id, title, filename, size_bytes, note, created_at
+    FROM client_files
+    WHERE demo_id = ${site.id}
+    ORDER BY created_at DESC, id DESC
+  `;
+
   return {
     account: { name: account.name, email: account.email },
     site: {
@@ -102,6 +110,7 @@ async function loadDashboard(sql, account) {
     stats: { days: STATS_DAYS, daily, totals, referrers },
     invoices,
     requests,
+    files,
   };
 }
 

@@ -810,3 +810,8 @@ a {
     font-size: 22px;
   }
 }
+
+.portal-file-note {
+  margin-top: 6px;
+  max-width: 60ch;
+}
