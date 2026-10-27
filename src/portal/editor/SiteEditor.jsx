@@ -1,37 +1,31 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
+import { callEditor } from "./api.js";
+import { FieldControl } from "./fields.jsx";
+import { HOME_ID } from "./layout.js";
+import { PagesPanel, SectionsPanel } from "./panels.jsx";
 
 // The client site editor. The client's own site runs in the preview frame with ?bws-edit=1;
-// it tells us which fields it has (the "ready" message), we send it the edits as they change,
-// and it tells us when an element is clicked or dragged to a new size.
+// it tells us which fields, designed sections and section types it has (the "ready" message),
+// we send it the edits as they change, and it tells us when an element is clicked, dragged
+// to a new size, or the preview moves to another page.
 // Edits are overrides only: a field missing from `edits` shows the site's built-in content.
+// The `layout` edit holds the pages and their sections.
 
 const MESSAGE_SOURCE = "bws-editor";
 const AUTOSAVE_MS = 1200;
 const READY_TIMEOUT_MS = 15000;
-const MAX_IMAGE_SIDE = 2000;
 const DEVICES = [
   { id: "desktop", label: "Desktop", width: 1280 },
   { id: "tablet", label: "Tablet", width: 820 },
   { id: "phone", label: "Phone", width: 390 },
 ];
+const TABS = [
+  ["sections", "Sections"],
+  ["content", "Site-wide"],
+  ["pages", "Pages"],
+];
 
-async function callEditor(payload) {
-  try {
-    const response = await fetch("/api/site-editor", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.success) {
-      return { error: data.message || "Something went wrong. Please try again.", status: response.status };
-    }
-    return { data };
-  } catch {
-    return { error: "We couldn't reach the editor. Check your connection and try again." };
-  }
-}
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 function originOf(url) {
   try {
@@ -43,7 +37,7 @@ function originOf(url) {
 
 function sameEdits(a, b) {
   const keys = new Set([...Object.keys(a), ...Object.keys(b)]);
-  for (const key of keys) if (a[key] !== b[key]) return false;
+  for (const key of keys) if (!same(a[key], b[key])) return false;
   return true;
 }
 
@@ -54,107 +48,6 @@ function timeAgo(value) {
   if (minutes < 1) return "just now";
   if (minutes < 60) return `${minutes} min ago`;
   return date.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-}
-
-// Shrinks big photos in the browser before upload; GIFs keep their animation
-async function prepareImage(file) {
-  if (file.type === "image/gif" || !/^image\/(jpeg|png|webp)$/.test(file.type)) return file;
-  const bitmap = await createImageBitmap(file).catch(() => null);
-  if (!bitmap) return file;
-  const scale = Math.min(1, MAX_IMAGE_SIDE / Math.max(bitmap.width, bitmap.height));
-  if (scale === 1 && file.size < 900_000) return file;
-
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d").drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  const type = file.type === "image/png" ? "image/png" : "image/webp";
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, type, 0.86));
-  return blob && blob.size < file.size ? blob : file;
-}
-
-function toBase64(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-}
-
-function FieldControl({ field, value, changed, onChange, onReset, onFocus, selected }) {
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
-  const ref = useRef(null);
-  const id = `field-${field.key}`;
-
-  useEffect(() => {
-    if (selected) ref.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [selected]);
-
-  async function upload(event) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    setUploading(true);
-    setError("");
-    const prepared = await prepareImage(file);
-    const result = await callEditor({ action: "upload", filename: file.name, data: await toBase64(prepared) });
-    setUploading(false);
-    if (result.error) setError(result.error);
-    else onChange(result.data.url);
-  }
-
-  let control;
-  if (field.type === "textarea") {
-    control = <textarea id={id} rows={field.rows || 4} value={value} onChange={(e) => onChange(e.target.value)} onFocus={onFocus} />;
-  } else if (field.type === "color") {
-    control = (
-      <div className="ed-color">
-        <input type="color" value={/^#[0-9a-f]{6}$/i.test(value) ? value : "#000000"} onChange={(e) => onChange(e.target.value)} onFocus={onFocus} aria-label={`${field.label} picker`} />
-        <input id={id} type="text" value={value} maxLength={7} spellCheck="false" onChange={(e) => onChange(e.target.value)} onFocus={onFocus} />
-      </div>
-    );
-  } else if (field.type === "size") {
-    control = (
-      <div className="ed-size">
-        <input id={id} type="range" min={field.min} max={field.max} step={field.step || 1} value={value} onChange={(e) => onChange(Number(e.target.value))} onFocus={onFocus} />
-        <span className="ed-size-value">
-          {value}
-          {field.unit || ""}
-        </span>
-      </div>
-    );
-  } else if (field.type === "image") {
-    control = (
-      <div className="ed-image">
-        <span className="ed-image-thumb">{value ? <img src={value} alt="" /> : <em>No image</em>}</span>
-        <label className="ed-button ed-button-small">
-          {uploading ? "Uploading…" : "Replace image"}
-          <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={upload} disabled={uploading} hidden />
-        </label>
-      </div>
-    );
-  } else {
-    const inputType = { link: "url", email: "email", phone: "tel" }[field.type] || "text";
-    control = <input id={id} type={inputType} value={value} onChange={(e) => onChange(e.target.value)} onFocus={onFocus} placeholder={field.placeholder || ""} />;
-  }
-
-  return (
-    <div ref={ref} className={`ed-field${changed ? " is-changed" : ""}${selected ? " is-selected" : ""}`}>
-      <div className="ed-field-head">
-        <label htmlFor={id}>{field.label}</label>
-        {changed && (
-          <button type="button" className="ed-reset" onClick={onReset} title="Go back to the original">
-            Reset
-          </button>
-        )}
-      </div>
-      {control}
-      {field.help && <p className="ed-help">{field.help}</p>}
-      {error && <p className="ed-error">{error}</p>}
-    </div>
-  );
 }
 
 function History({ versions, onRestore, onClose }) {
@@ -222,7 +115,7 @@ function historyReducer(history, action) {
     next = action.edits;
   }
   if (sameEdits(next, history.edits)) return history;
-  const key = action.key || "";
+  const key = action.group || action.key || "";
   const at = key ? Date.now() : 0;
   const grouped = key && history.lastKey === key && at - history.lastAt < 1500;
   return {
@@ -241,36 +134,45 @@ function normalize(field, value) {
     if (!Number.isFinite(number)) return null;
     const step = field.step || 1;
     value = Math.min(field.max, Math.max(field.min, Math.round(number / step) * step));
+  } else if (field.type === "list") {
+    if (!Array.isArray(value)) return null;
   } else {
     value = String(value ?? "");
   }
-  return value === field.default ? undefined : value;
+  return same(value, field.default) ? undefined : value;
 }
 
 export default function SiteEditor() {
   const [state, setState] = useState(null);
   const [loadError, setLoadError] = useState("");
-  const [fields, setFields] = useState(null);
-  const [groups, setGroups] = useState([]);
+  const [schema, setSchema] = useState(null);
   const [frameProblem, setFrameProblem] = useState(false);
   const [history, dispatch] = useReducer(historyReducer, EMPTY_HISTORY);
   const [saveState, setSaveState] = useState("saved");
   const [notice, setNotice] = useState("");
   const [device, setDevice] = useState("desktop");
+  const [tab, setTab] = useState("sections");
+  const [pageId, setPageId] = useState(HOME_ID);
   const [openGroup, setOpenGroup] = useState("");
   const [selected, setSelected] = useState("");
+  const [selectedSection, setSelectedSection] = useState("");
+  const [selectedSectionField, setSelectedSectionField] = useState("");
   const [query, setQuery] = useState("");
   const [showHistory, setShowHistory] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [stageWidth, setStageWidth] = useState(1000);
+  const [saved, setSaved] = useState({});
   const frameRef = useRef(null);
   const stageRef = useRef(null);
-  const [saved, setSaved] = useState({});
 
   const { edits, past, future } = history;
   const siteOrigin = state ? originOf(state.site.url) : "";
   const published = state?.published ?? {};
+  const fields = schema?.fields;
   const fieldMap = useMemo(() => Object.fromEntries((fields || []).map((f) => [f.key, f])), [fields]);
+  const builtinGroups = useMemo(() => new Map((schema?.builtins || []).map((b) => [b.group, b.id])), [schema]);
+  const layout = edits.layout ?? schema?.defaultLayout;
+  const page = layout?.pages.find((p) => p.id === pageId) || layout?.pages[0];
 
   useEffect(() => {
     callEditor({ action: "load" }).then((result) => {
@@ -293,13 +195,32 @@ export default function SiteEditor() {
     [siteOrigin]
   );
 
-  const selectField = useCallback(
+  // A click in the preview: a designed section's field opens that section on the
+  // Sections tab, a site-wide field opens the Site-wide tab, an added section opens itself
+  const selectKey = useCallback(
     (key) => {
-      setSelected(key);
       setQuery("");
-      if (fieldMap[key]) setOpenGroup(fieldMap[key].group);
+      const sectionMatch = /^section:([^.]+)(?:\.(.+))?$/.exec(key);
+      if (sectionMatch) {
+        setTab("sections");
+        setSelectedSection(sectionMatch[1]);
+        setSelectedSectionField(sectionMatch[2] || "");
+        setSelected("");
+        return;
+      }
+      const field = fieldMap[key];
+      if (!field) return;
+      const builtin = builtinGroups.get(field.group);
+      setSelected(key);
+      if (builtin) {
+        setTab("sections");
+        setSelectedSection(builtin);
+      } else {
+        setTab("content");
+        setOpenGroup(field.group);
+      }
     },
-    [fieldMap]
+    [fieldMap, builtinGroups]
   );
 
   // Messages from the site in the preview frame
@@ -309,36 +230,48 @@ export default function SiteEditor() {
       if (event.origin !== siteOrigin || event.data?.source !== MESSAGE_SOURCE) return;
       const message = event.data;
       if (message.type === "ready" && Array.isArray(message.fields)) {
-        setFields(message.fields);
-        setGroups(message.groups || [...new Set(message.fields.map((f) => f.group))]);
+        setSchema({
+          fields: message.fields,
+          groups: message.groups || [...new Set(message.fields.map((f) => f.group))],
+          builtins: message.builtins || [],
+          sectionTypes: message.sectionTypes || [],
+          styleFields: message.styleFields || [],
+          defaultLayout: message.defaultLayout || { pages: [{ id: HOME_ID, title: "Home", slug: "", nav: false, sections: [] }] },
+        });
         setFrameProblem(false);
-      } else if (message.type === "select" && fieldMap[message.key]) {
-        selectField(message.key);
+      } else if (message.type === "select" && typeof message.key === "string") {
+        selectKey(message.key);
+      } else if (message.type === "page" && typeof message.id === "string") {
+        setPageId(message.id);
       } else if (message.type === "change" && fieldMap[message.key]) {
         const value = normalize(fieldMap[message.key], message.value);
         if (value !== null) dispatch({ type: "set", key: message.key, value });
-        selectField(message.key);
+        selectKey(message.key);
       }
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [siteOrigin, fieldMap, selectField]);
+  }, [siteOrigin, fieldMap, selectKey]);
 
   // Sites that don't answer haven't been set up for the editor yet
   useEffect(() => {
-    if (!state || fields) return undefined;
+    if (!state || schema) return undefined;
     const timer = setTimeout(() => setFrameProblem(true), READY_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [state, fields]);
+  }, [state, schema]);
 
   // Keep the preview in step with the edits (and resend once the site says it's ready)
   useEffect(() => {
-    if (fields) send({ type: "content", content: edits });
-  }, [edits, fields, send]);
+    if (schema) send({ type: "content", content: edits });
+  }, [edits, schema, send]);
 
   useEffect(() => {
-    if (selected && fields) send({ type: "focus", key: selected });
-  }, [selected, fields, send]);
+    if (selected && schema) send({ type: "focus", key: selected });
+  }, [selected, schema, send]);
+
+  useEffect(() => {
+    if (selectedSection && schema) send({ type: "focus", key: `section:${selectedSection}${selectedSectionField ? `.${selectedSectionField}` : ""}` });
+  }, [selectedSection, selectedSectionField, schema, send]);
 
   // Autosave the draft a moment after the last change
   useEffect(() => {
@@ -367,23 +300,35 @@ export default function SiteEditor() {
     return () => observer.disconnect();
   }, [state]);
 
-  function updateField(field, rawValue) {
-    const value = normalize(field, rawValue);
-    if (value === null) return;
-    dispatch({ type: "set", key: field.key, value });
-  }
-
   useEffect(() => {
     function onKey(event) {
       const mod = event.metaKey || event.ctrlKey;
       if (!mod || event.key.toLowerCase() !== "z") return;
-      if (event.target.closest?.("input[type=text], input[type=url], input[type=email], input[type=tel], textarea")) return;
+      if (event.target.closest?.("input[type=text], input[type=url], input[type=email], input[type=tel], input:not([type]), textarea")) return;
       event.preventDefault();
       dispatch({ type: event.shiftKey ? "redo" : "undo" });
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  function updateField(field, rawValue) {
+    const value = normalize(field, rawValue);
+    if (value === null) return;
+    dispatch({ type: "set", key: field.key, value });
+  }
+
+  // Layout changes are one edit; typing in one section groups into one undo step
+  function setLayout(next) {
+    dispatch({ type: "set", key: "layout", value: same(next, schema.defaultLayout) ? undefined : next, group: `layout:${selectedSection}` });
+  }
+
+  function openPage(target) {
+    setPageId(target.id);
+    setSelectedSection("");
+    setTab("sections");
+    send({ type: "page", slug: target.slug });
+  }
 
   async function publish() {
     const count = Object.keys(edits).length;
@@ -424,6 +369,20 @@ export default function SiteEditor() {
     setNotice("Loaded into the preview. Publish to put it on your site.");
   }
 
+  function renderField(field) {
+    return (
+      <FieldControl
+        key={field.key}
+        field={field}
+        value={field.key in edits ? edits[field.key] : field.default}
+        changed={field.key in edits}
+        selected={selected === field.key}
+        onChange={(value) => updateField(field, value)}
+        onReset={() => dispatch({ type: "set", key: field.key, value: undefined })}
+        onFocus={() => send({ type: "focus", key: field.key })}
+      />
+    );
+  }
 
   if (loadError) {
     return (
@@ -460,6 +419,8 @@ export default function SiteEditor() {
   const visibleFields = (fields || []).filter((f) => !search || `${f.label} ${f.group} ${f.help || ""}`.toLowerCase().includes(search));
   const dirty = !sameEdits(edits, saved);
   const saveText = { saved: dirty ? "Unsaved" : unpublished ? "Draft saved" : "All edits are live", saving: "Saving…", error: "Not saved" }[saveState];
+  // The Site-wide tab lists groups that aren't one designed section's own text
+  const siteWideGroups = (schema?.groups || []).filter((g) => search || !builtinGroups.has(g));
 
   return (
     <div className="ed-shell">
@@ -471,6 +432,18 @@ export default function SiteEditor() {
           <strong>Edit {state.site.name}</strong>
           <span className={`ed-status is-${saveState}`}>{saveText}</span>
         </div>
+        {layout && (
+          <label className="ed-page-pick">
+            <span>Page</span>
+            <select value={page.id} onChange={(e) => openPage(layout.pages.find((p) => p.id === e.target.value))}>
+              {layout.pages.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className="ed-devices" role="group" aria-label="Preview size">
           {DEVICES.map((d) => (
             <button key={d.id} type="button" className={device === d.id ? "is-active" : ""} aria-pressed={device === d.id} onClick={() => setDevice(d.id)}>
@@ -510,43 +483,62 @@ export default function SiteEditor() {
 
       <div className="ed-body">
         <aside className="ed-panel" aria-label="Site content">
-          {!fields && !frameProblem && <p className="ed-empty">Loading your site's content…</p>}
-          {frameProblem && !fields && (
+          {!schema && !frameProblem && <p className="ed-empty">Loading your site's content…</p>}
+          {frameProblem && !schema && (
             <p className="ed-error">
               Your site didn't connect to the editor. Try reloading this page. If it keeps happening, email hello@blueprintwebstudio.com.
             </p>
           )}
-          {fields && (
+          {schema && (
             <>
-              <p className="ed-tip">Click anything on your site to jump to it here. Drag the blue handles to resize.</p>
-              <input className="ed-search" type="search" placeholder="Find a field…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Find a field" />
-              {groups.map((group) => {
-                const list = visibleFields.filter((f) => f.group === group);
-                if (list.length === 0) return null;
-                const changedCount = list.filter((f) => f.key in edits).length;
-                const open = Boolean(search) || openGroup === group;
-                return (
-                  <section key={group} className={`ed-group${open ? " is-open" : ""}`}>
-                    <button type="button" className="ed-group-head" aria-expanded={open} onClick={() => setOpenGroup(open ? "" : group)}>
-                      <span>{group}</span>
-                      {changedCount > 0 && <span className="ed-count">{changedCount} changed</span>}
-                    </button>
-                    {open &&
-                      list.map((field) => (
-                        <FieldControl
-                          key={field.key}
-                          field={field}
-                          value={field.key in edits ? edits[field.key] : field.default}
-                          changed={field.key in edits}
-                          selected={selected === field.key}
-                          onChange={(value) => updateField(field, value)}
-                          onReset={() => dispatch({ type: "set", key: field.key, value: undefined })}
-                          onFocus={() => send({ type: "focus", key: field.key })}
-                        />
-                      ))}
-                  </section>
-                );
-              })}
+              <div className="ed-tabs" role="tablist">
+                {TABS.map(([id, label]) => (
+                  <button key={id} type="button" role="tab" aria-selected={tab === id} className={tab === id ? "is-active" : ""} onClick={() => setTab(id)}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {tab === "sections" && (
+                <SectionsPanel
+                  schema={schema}
+                  layout={layout}
+                  page={page}
+                  selectedSection={selectedSection}
+                  selectedField={selectedSectionField}
+                  onSelectSection={(id) => {
+                    setSelectedSection(id);
+                    setSelectedSectionField("");
+                  }}
+                  onLayout={setLayout}
+                  renderGroup={(group) => (fields || []).filter((f) => f.group === group).map(renderField)}
+                  send={send}
+                />
+              )}
+
+              {tab === "content" && (
+                <>
+                  <p className="ed-tip">Colors, sizes, logo, contact details and the header and footer, used on every page. Click anything on your site to jump to it.</p>
+                  <input className="ed-search" type="search" placeholder="Find any field…" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="Find a field" />
+                  {siteWideGroups.map((group) => {
+                    const list = visibleFields.filter((f) => f.group === group);
+                    if (list.length === 0) return null;
+                    const changedCount = list.filter((f) => f.key in edits).length;
+                    const open = Boolean(search) || openGroup === group;
+                    return (
+                      <section key={group} className={`ed-group${open ? " is-open" : ""}`}>
+                        <button type="button" className="ed-group-head" aria-expanded={open} onClick={() => setOpenGroup(open ? "" : group)}>
+                          <span>{group}</span>
+                          {changedCount > 0 && <span className="ed-count">{changedCount} changed</span>}
+                        </button>
+                        {open && list.map(renderField)}
+                      </section>
+                    );
+                  })}
+                </>
+              )}
+
+              {tab === "pages" && <PagesPanel schema={schema} layout={layout} currentPageId={page.id} onLayout={setLayout} onOpenPage={openPage} />}
             </>
           )}
         </aside>

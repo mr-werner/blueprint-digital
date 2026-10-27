@@ -35,15 +35,37 @@ function fail(res, status, message) {
   return res.status(status).json({ success: false, message });
 }
 
-// Keeps only well-formed overrides; anything else is dropped, never stored
+// Keeps only well-formed overrides; anything else is dropped, never stored.
+// Values are text, numbers and booleans, plus lists and small objects for
+// list fields and the page layout (pages -> sections -> items).
+const MAX_DEPTH = 6;
+const MAX_LIST = 100;
+const MAX_OBJECT_KEYS = 60;
+
+function cleanValue(value, depth) {
+  if (typeof value === "string") return value.slice(0, MAX_VALUE);
+  if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
+  if (typeof value === "boolean") return value;
+  if (!value || typeof value !== "object" || depth >= MAX_DEPTH) return undefined;
+  if (Array.isArray(value)) {
+    return value.slice(0, MAX_LIST).map((item) => cleanValue(item, depth + 1)).filter((item) => item !== undefined);
+  }
+  const clean = {};
+  for (const [key, item] of Object.entries(value).slice(0, MAX_OBJECT_KEYS)) {
+    if (!KEY_PATTERN.test(key)) continue;
+    const cleaned = cleanValue(item, depth + 1);
+    if (cleaned !== undefined) clean[key] = cleaned;
+  }
+  return clean;
+}
+
 function cleanContent(input) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return {};
   const clean = {};
   for (const [key, value] of Object.entries(input).slice(0, MAX_KEYS)) {
     if (!KEY_PATTERN.test(key)) continue;
-    if (typeof value === "string") clean[key] = value.slice(0, MAX_VALUE);
-    else if (typeof value === "number" && Number.isFinite(value)) clean[key] = value;
-    else if (typeof value === "boolean") clean[key] = value;
+    const cleaned = cleanValue(value, 0);
+    if (cleaned !== undefined) clean[key] = cleaned;
   }
   return clean;
 }
