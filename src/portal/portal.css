@@ -674,7 +674,7 @@ a {
 
 .portal-tabbar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 6px;
   margin-bottom: 20px;
   padding: 6px;
@@ -729,7 +729,13 @@ a {
   color: rgba(255, 255, 255, 0.72);
 }
 
-.portal-panel > .portal-card {
+.portal-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.portal-panel > .portal-card:only-child {
   min-height: 320px;
 }
 
@@ -808,5 +814,340 @@ a {
   /* The chart scales down with the screen, so its text is drawn larger */
   .portal-chart-label {
     font-size: 22px;
+  }
+}
+
+.portal-file-note {
+  margin-top: 6px;
+  max-width: 60ch;
+}
+
+.portal-tag {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 6px;
+  background: var(--gray-soft);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+}
+
+.portal-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Agreement */
+
+.portal-pill-contract-draft,
+.portal-pill-contract-sent {
+  background: var(--amber-soft);
+  color: var(--amber);
+}
+
+.portal-pill-contract-signed,
+.portal-pill-contract-in_progress {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.portal-pill-contract-complete {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.portal-agreement-title {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.portal-agreement-summary {
+  margin-top: -8px;
+  max-width: 70ch;
+  color: var(--muted);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.portal-dates {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  margin: 0;
+}
+
+.portal-dates dt {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.portal-dates dd {
+  margin: 2px 0 0;
+  font-weight: 600;
+}
+
+.portal-agreement-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.portal-agreement-block {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.portal-cost-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.portal-cost-table th,
+.portal-cost-table td {
+  padding: 10px 0;
+  border-top: 1px solid var(--grid);
+  vertical-align: top;
+}
+
+.portal-cost-table tbody tr:first-child th,
+.portal-cost-table tbody tr:first-child td {
+  border-top: 0;
+}
+
+.portal-cost-table th {
+  font-weight: 600;
+  text-align: left;
+}
+
+.portal-cost-table th span {
+  display: block;
+  margin-top: 2px;
+  font-weight: 400;
+}
+
+.portal-cost-table td {
+  padding-left: 16px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.portal-cost-table tfoot th,
+.portal-cost-table tfoot td {
+  border-top: 2px solid var(--text);
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.portal-monthly {
+  background: var(--off-white);
+  border-color: transparent;
+}
+
+.portal-monthly-price {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.portal-monthly-price .portal-muted {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.portal-checklist {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 14px;
+}
+
+.portal-checklist li {
+  position: relative;
+  padding-left: 24px;
+}
+
+.portal-checklist li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: var(--green);
+  font-weight: 800;
+}
+
+.portal-terms p {
+  max-width: 70ch;
+  color: var(--muted);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.portal-agreement-files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Project timeline */
+
+.portal-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gray-soft);
+  overflow: hidden;
+}
+
+.portal-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--green);
+  transition: width 0.3s ease;
+}
+
+.portal-timeline {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.portal-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 16px;
+  padding-bottom: 24px;
+}
+
+.portal-step:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  top: 36px;
+  bottom: 0;
+  left: 17px;
+  width: 2px;
+  background: var(--line);
+}
+
+.portal-step-done:not(:last-child)::before {
+  background: var(--green);
+}
+
+.portal-step-marker {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  background: var(--white);
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.portal-step-in_progress .portal-step-marker {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.portal-step-done .portal-step-marker {
+  border-color: var(--green);
+  background: var(--green);
+  color: var(--white);
+}
+
+.portal-step-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  min-height: 36px;
+}
+
+.portal-step-head h3 {
+  font-size: 16px;
+}
+
+.portal-pill-step-planned {
+  background: var(--gray-soft);
+  color: var(--muted);
+}
+
+.portal-pill-step-in_progress {
+  background: var(--blue-soft);
+  color: var(--blue);
+}
+
+.portal-pill-step-done {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.portal-step-details {
+  margin-top: 4px;
+  max-width: 70ch;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.portal-deliverables {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 14px;
+}
+
+.portal-deliverables li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.portal-deliverables li > span:first-child {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--line);
+  border-radius: 5px;
+  color: var(--white);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.portal-deliverables li.is-done > span:first-child {
+  border-color: var(--green);
+  background: var(--green);
+}
+
+.portal-deliverables li.is-done {
+  color: var(--muted);
+}
+
+@media (max-width: 760px) {
+  .portal-agreement-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .portal-card {
+    padding: 18px;
   }
 }

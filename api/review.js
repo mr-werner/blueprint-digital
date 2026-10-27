@@ -1,5 +1,6 @@
 import { neon } from "@neondatabase/serverless";
 import { Resend } from "resend";
+import { currentAdmin, reviewCode } from "../lib/admin-auth.js";
 
 const MAX_NOTE_LENGTH = 4000;
 const MAX_EMAIL_LENGTH = 20000;
@@ -197,14 +198,6 @@ export default async function handler(req, res) {
       invoice,
     } = req.body ?? {};
 
-    // Make sure a review code was provided
-    if (!code || typeof code !== "string" || !code.trim()) {
-      return fail(res, 400, "Please enter your review code.");
-    }
-
-    // Normalize the code so capitalization doesn't matter
-    const normalizedCode = code.trim().toUpperCase();
-
     // Get the Neon connection string from Vercel
     const connectionString = process.env.BLUEPRINT_DB_DATABASE_URL;
 
@@ -216,18 +209,31 @@ export default async function handler(req, res) {
     // Connect to Neon
     const sql = neon(connectionString);
 
-    // The review code is an active row in demos flagged as an admin code
-    const access = await sql`
-      SELECT id
-      FROM demos
-      WHERE UPPER(demo_code) = ${normalizedCode}
-        AND status = 'active'
-        AND is_admin = true
-      LIMIT 1
-    `;
+    // Signed in to the studio dashboard, or holding the review code
+    // (an active row in demos flagged as an admin code)
+    let accessCode = null;
+    if (await currentAdmin(sql, req)) {
+      accessCode = await reviewCode(sql);
+    } else {
+      if (!code || typeof code !== "string" || !code.trim()) {
+        return fail(res, 400, "Please enter your review code.");
+      }
 
-    if (access.length === 0) {
-      return fail(res, 401, "That review code isn't valid.");
+      // Normalize the code so capitalization doesn't matter
+      const normalizedCode = code.trim().toUpperCase();
+      const access = await sql`
+        SELECT demo_code
+        FROM demos
+        WHERE UPPER(demo_code) = ${normalizedCode}
+          AND status = 'active'
+          AND is_admin = true
+        LIMIT 1
+      `;
+
+      if (access.length === 0) {
+        return fail(res, 401, "That review code isn't valid.");
+      }
+      accessCode = access[0].demo_code;
     }
 
     if (action === "addNote") {
@@ -467,6 +473,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
+      code: accessCode,
       demos: await loadDemos(sql),
     });
   } catch (error) {

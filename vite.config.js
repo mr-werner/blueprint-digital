@@ -11,6 +11,7 @@ export default defineConfig({
         main: resolve(import.meta.dirname, "index.html"),
         review: resolve(import.meta.dirname, "review/index.html"),
         portal: resolve(import.meta.dirname, "portal/index.html"),
+        admin: resolve(import.meta.dirname, "admin/index.html"),
       },
     },
   },

@@ -4,7 +4,10 @@ import { neon } from "@neondatabase/serverless";
 // Records one page view for a client site, sent by a small beacon script on
 // that site. Visitors are counted by a daily hash of IP and browser, so no
 // cookie is set and nobody can be followed from one day to the next.
+// Studio subdomains are matched on demos.demo_url; a client's own domain
+// (for example a WordPress site running our theme) is listed in site_domains.
 const ORIGIN_PATTERN = /^https:\/\/[a-z0-9-]+\.blueprintwebstudio\.com$/;
+const ANY_HTTPS_ORIGIN = /^https:\/\/[a-z0-9.-]+$/i;
 
 function hostOf(url) {
   try {
@@ -17,7 +20,7 @@ function hostOf(url) {
 export default async function handler(req, res) {
   const origin = req.headers.origin || "";
 
-  if (ORIGIN_PATTERN.test(origin)) {
+  if (ANY_HTTPS_ORIGIN.test(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
   }
@@ -30,8 +33,8 @@ export default async function handler(req, res) {
     return res.status(405).end();
   }
 
-  // Only client subdomains are counted; anything else is ignored quietly
-  if (!ORIGIN_PATTERN.test(origin)) return res.status(204).end();
+  // Only client sites are counted; anything else is ignored quietly
+  if (!ANY_HTTPS_ORIGIN.test(origin)) return res.status(204).end();
 
   const userAgent = String(req.headers["user-agent"] || "");
   if (/bot|crawl|spider|preview|headless|lighthouse/i.test(userAgent)) {
@@ -66,15 +69,28 @@ export default async function handler(req, res) {
     const device = /mobi|iphone|android/i.test(userAgent) ? "mobile" : "desktop";
 
     const sql = neon(connectionString);
-    await sql`
-      INSERT INTO site_visits (demo_id, path, referrer, visitor, device)
-      SELECT id, ${path}, ${referrer}, ${visitor}, ${device}
-      FROM demos
-      WHERE rtrim(demo_url, '/') = ${origin}
-        AND status = 'active'
-        AND portal_enabled = true
-      LIMIT 1
-    `;
+    if (ORIGIN_PATTERN.test(origin)) {
+      await sql`
+        INSERT INTO site_visits (demo_id, path, referrer, visitor, device)
+        SELECT id, ${path}, ${referrer}, ${visitor}, ${device}
+        FROM demos
+        WHERE rtrim(demo_url, '/') = ${origin}
+          AND status = 'active'
+          AND portal_enabled = true
+        LIMIT 1
+      `;
+    } else {
+      await sql`
+        INSERT INTO site_visits (demo_id, path, referrer, visitor, device)
+        SELECT d.id, ${path}, ${referrer}, ${visitor}, ${device}
+        FROM site_domains sd
+        JOIN demos d ON d.id = sd.demo_id
+        WHERE sd.host = ${ownHost.toLowerCase().replace(/^www\./, "")}
+          AND d.status = 'active'
+          AND d.portal_enabled = true
+        LIMIT 1
+      `;
+    }
   } catch (error) {
     console.error("Visit tracking error:", error);
   }
