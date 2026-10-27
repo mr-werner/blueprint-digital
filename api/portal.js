@@ -33,7 +33,7 @@ function text(value, max = 200) {
 // Everything the dashboard shows for one site
 async function loadDashboard(sql, account) {
   const [site] = await sql`
-    SELECT id, business_name, contact_name, demo_url, created_at, view_count, last_viewed_at
+    SELECT id, business_name, contact_name, demo_url, created_at, view_count, last_viewed_at, editor_enabled
     FROM demos WHERE id = ${account.demo_id}
   `;
 
@@ -118,6 +118,7 @@ async function loadDashboard(sql, account) {
       name: site.business_name,
       url: site.demo_url,
       liveSince: site.created_at,
+      editorEnabled: site.editor_enabled,
     },
     stats: { days: STATS_DAYS, daily, totals, referrers },
     invoices,
