@@ -501,13 +501,379 @@ textarea {
   color: var(--muted);
 }
 
+/* Tabs: Sections, Site-wide, Pages */
+.ed-tabs {
+  display: flex;
+  gap: 4px;
+  margin: -2px 0 14px;
+  padding: 4px;
+  border-radius: 10px;
+  background: var(--off-white);
+}
+
+.ed-tabs button {
+  flex: 1;
+  padding: 8px 6px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ed-tabs button.is-active {
+  background: var(--white);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(3, 21, 44, 0.12);
+}
+
+.ed-page-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #9fb0c8;
+}
+
+.ed-page-pick select {
+  max-width: 180px;
+  padding: 6px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 8px;
+  background: var(--navy);
+  color: var(--white);
+  font-weight: 600;
+}
+
+.ed-field select {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  font-size: 14px;
+}
+
+.ed-field.is-compact {
+  margin-bottom: 6px;
+}
+
+.ed-mini {
+  flex: 0 0 auto;
+  min-width: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--white);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ed-mini:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.ed-mini-danger:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.ed-add {
+  width: 100%;
+  padding: 9px;
+  border: 1px dashed #b7c3d3;
+  border-radius: 8px;
+  background: none;
+  color: var(--blue);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ed-add:hover {
+  background: var(--blue-soft);
+}
+
+/* Lists inside a field (FAQ questions, cards, steps) */
+.ed-list {
+  display: grid;
+  gap: 6px;
+}
+
+.ed-list-item {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+}
+
+.ed-list-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 4px 4px 0;
+}
+
+.ed-list-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border: 0;
+  background: none;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.ed-list-no {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--off-white);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.ed-list-body {
+  padding: 4px 10px 8px;
+  border-top: 1px solid var(--line);
+}
+
+/* Sections tab */
+.ed-section-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.ed-section-row {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+}
+
+.ed-section-row.is-open {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue-soft);
+}
+
+.ed-section-row.is-hidden .ed-section-title {
+  color: var(--muted);
+}
+
+.ed-section-head {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+}
+
+.ed-section-head .ed-mini {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 5px;
+  font-size: 12px;
+}
+
+.ed-grip {
+  color: #a9b4c3;
+  font-size: 12px;
+  letter-spacing: -2px;
+  cursor: grab;
+  padding: 0 2px;
+}
+
+.ed-section-title {
+  flex: 1;
+  min-width: 0;
+  padding: 4px;
+  border: 0;
+  background: none;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.ed-section-title em {
+  font-weight: 500;
+}
+
+.ed-section-body {
+  padding: 8px 12px 6px;
+  border-top: 1px solid var(--line);
+}
+
+.ed-style {
+  margin: 4px -6px 8px;
+  padding: 8px 6px 0;
+  border-top: 1px solid var(--line);
+}
+
+.ed-style summary {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ed-picker {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--off-white);
+}
+
+.ed-picker h3 {
+  margin: 0;
+  font-size: 14px;
+}
+
+.ed-picker-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.ed-picker-option {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--white);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ed-picker-option:hover {
+  border-color: var(--blue);
+}
+
+.ed-picker-option strong {
+  font-size: 13px;
+}
+
+.ed-picker-option span {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+/* Pages tab */
+.ed-page-list {
+  list-style: none;
+  margin: 0 0 14px;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.ed-page-list li {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--white);
+}
+
+.ed-page-list li.is-current {
+  border-color: var(--blue);
+}
+
+.ed-page-row,
+.ed-page-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ed-page-row strong {
+  flex: 1;
+}
+
+.ed-page-meta {
+  margin-top: 8px;
+  gap: 4px;
+}
+
+.ed-page-title,
+.ed-page-slug,
+.ed-add-page input {
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.ed-page-title {
+  flex: 1;
+  font-weight: 600;
+}
+
+.ed-page-slug {
+  width: 110px;
+  margin-left: 2px;
+  padding: 5px 7px;
+  font-size: 12.5px;
+}
+
+.ed-page-meta > label:first-child {
+  flex: 1;
+}
+
+.ed-muted {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.ed-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-right: 4px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.ed-add-page {
+  display: flex;
+  gap: 8px;
+}
+
+.ed-add-page input {
+  flex: 1;
+}
+
 /* Phones: the panel sits under a shorter preview */
 @media (max-width: 860px) {
   .ed-bar {
     gap: 10px;
   }
 
-  .ed-devices {
+  .ed-devices,
+  .ed-page-pick span {
     display: none;
   }
 
