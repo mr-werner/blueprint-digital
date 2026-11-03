@@ -1,6 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { Resend } from "resend";
 import { currentAdmin, reviewCode } from "../lib/admin-auth.js";
+import { setSiteAccess, SiteAccessError } from "../lib/site-access.js";
 
 const MAX_NOTE_LENGTH = 4000;
 const MAX_EMAIL_LENGTH = 20000;
@@ -93,7 +94,8 @@ async function loadDemos(sql) {
       emailed_at,
       emailed_to,
       contact_form_url,
-      portal_enabled
+      portal_enabled,
+      closed_at
     FROM demos
     WHERE is_admin = false
     ORDER BY created_at DESC, id DESC
@@ -196,6 +198,7 @@ export default async function handler(req, res) {
       reply,
       invoiceId,
       invoice,
+      open,
     } = req.body ?? {};
 
     // Get the Neon connection string from Vercel
@@ -402,6 +405,34 @@ export default async function handler(req, res) {
       await sql`
         INSERT INTO demo_contacts (demo_id, method, contacted_at, note)
         VALUES (${id}, 'email', NOW(), ${`Sent from the review page to ${recipient}`})
+      `;
+    } else if (action === "setSiteAccess") {
+      // Turns the concept's subdomain off (neutral "no longer available"
+      // page, nothing served) or back on. The repo and Vercel project stay.
+      const id = toId(demoId);
+      if (!id) return fail(res, 400, "Concept not found.");
+
+      const rows = await sql`
+        SELECT id, business_name, demo_url, vercel_project_id
+        FROM demos WHERE id = ${id} AND is_admin = false
+      `;
+      if (rows.length === 0) return fail(res, 404, "Concept not found.");
+
+      let projectId;
+      try {
+        projectId = await setSiteAccess(rows[0], Boolean(open));
+      } catch (error) {
+        if (error instanceof SiteAccessError) return fail(res, 502, error.message);
+        throw error;
+      }
+
+      // Closed demos also stop the access code, client portal and editor
+      await sql`
+        UPDATE demos
+        SET status = ${open ? "active" : "closed"},
+            closed_at = ${open ? null : new Date().toISOString()},
+            vercel_project_id = ${projectId}
+        WHERE id = ${id}
       `;
     } else if (action === "setPortal") {
       // Lets this client create an account with their access code
