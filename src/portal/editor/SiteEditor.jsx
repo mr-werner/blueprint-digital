@@ -12,6 +12,11 @@ import { PagesPanel, SectionsPanel } from "./panels.jsx";
 // The `layout` edit holds the pages and their sections.
 
 const MESSAGE_SOURCE = "bws-editor";
+// ?page=<address> opens the preview on that page of the site (links from the site itself)
+const START_PAGE = (() => {
+  const page = new URLSearchParams(window.location.search).get("page") || "";
+  return /^[a-z0-9-]{1,40}$/.test(page) ? page : "";
+})();
 const AUTOSAVE_MS = 1200;
 const READY_TIMEOUT_MS = 15000;
 const DEVICES = [
@@ -171,13 +176,14 @@ export default function SiteEditor() {
   const fields = schema?.fields;
   const fieldMap = useMemo(() => Object.fromEntries((fields || []).map((f) => [f.key, f])), [fields]);
   const builtinGroups = useMemo(() => new Map((schema?.builtins || []).map((b) => [b.group, b.id])), [schema]);
-  const layout = edits.layout ?? schema?.defaultLayout;
+  // A layout saved for an older version of the site's pages is dropped, the same way the site drops it
+  const layout = edits.layout && edits.layout.version === schema?.defaultLayout?.version ? edits.layout : schema?.defaultLayout;
   const page = layout?.pages.find((p) => p.id === pageId) || layout?.pages[0];
 
   useEffect(() => {
     callEditor({ action: "load" }).then((result) => {
       if (result.status === 401) {
-        window.location.replace("/portal/");
+        window.location.replace(`/portal/?next=editor${START_PAGE ? `&page=${START_PAGE}` : ""}`);
         return;
       }
       if (result.error) return setLoadError(result.error);
@@ -548,7 +554,7 @@ export default function SiteEditor() {
             <iframe
               ref={frameRef}
               title={`${state.site.name} preview`}
-              src={`${state.site.url.replace(/\/$/, "")}/?bws-edit=1`}
+              src={`${state.site.url.replace(/\/$/, "")}/${START_PAGE}?bws-edit=1`}
               style={{ width, height: `${100 / scale}%`, transform: `scale(${scale})` }}
             />
           </div>
