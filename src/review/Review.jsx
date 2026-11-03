@@ -7,6 +7,7 @@ import {
   Logo,
   Outreach,
   Preview,
+  SiteAccess,
 } from "./ReviewParts.jsx";
 
 const STORAGE_KEY = "bws-review-code";
@@ -332,6 +333,8 @@ export default function Review() {
                 <dd>{formatDate(demo.created_at)}</dd>
               </div>
             </dl>
+
+            <SiteAccess demo={demo} onAction={runAction} />
 
             <ConceptNotes demo={demo} onAction={runAction} />
 

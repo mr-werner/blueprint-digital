@@ -648,3 +648,37 @@ export function ClientPortal({ demo, onAction }) {
     </section>
   );
 }
+
+// Turns the concept's subdomain off and back on. Closed sites show a neutral
+// "no longer available" page; the repo and Vercel project are kept.
+export function SiteAccess({ demo, onAction }) {
+  const [busy, setBusy] = useState(false);
+  const open = demo.status === "active";
+  const host = hostOf(demo.demo_url);
+
+  async function toggle() {
+    const question = open
+      ? `Turn off ${host}? Visitors will see "This concept is no longer available", and the access code, client portal and editor stop working until you turn it back on.`
+      : `Turn ${host} back on? The site, access code, client portal and editor will work again.`;
+    if (!window.confirm(question)) return;
+    setBusy(true);
+    await onAction({ action: "setSiteAccess", demoId: demo.id, open: !open });
+    setBusy(false);
+  }
+
+  return (
+    <div className={`review-access${open ? "" : " review-access-closed"}`}>
+      <span>
+        <strong>{open ? "Site is on" : "Site is off"}</strong>
+        <small>
+          {open
+            ? `${host} is open to anyone with the link.`
+            : `${host} shows "no longer available"${demo.closed_at ? ` since ${formatDate(demo.closed_at)}` : ""}. Code and deployments are kept.`}
+        </small>
+      </span>
+      <button type="button" className="review-access-button" onClick={toggle} disabled={busy}>
+        {busy ? "Saving…" : open ? "Turn off" : "Turn back on"}
+      </button>
+    </div>
+  );
+}
