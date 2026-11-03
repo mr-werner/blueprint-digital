@@ -96,6 +96,17 @@ function clearQuery() {
   }
 }
 
+// A link to the editor from a signed-out browser comes back here as ?next=editor and
+// goes on to the editor once the client is signed in
+function editorTarget() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("next") !== "editor") return "";
+  const page = params.get("page") || "";
+  return `/portal/editor/${/^[a-z0-9-]{1,40}$/.test(page) ? `?page=${page}` : ""}`;
+}
+
+const EDITOR_TARGET = editorTarget();
+
 // A reset link opens the new-password form even if this browser is signed in
 const OPENED_FROM_RESET = new URLSearchParams(window.location.search).has("reset");
 
@@ -963,6 +974,15 @@ export default function Portal() {
   }
 
   if (!data) return <AuthScreen onSignedIn={setData} />;
+
+  if (EDITOR_TARGET && data.site.editorEnabled) {
+    window.location.replace(EDITOR_TARGET);
+    return (
+      <main className="portal-gate">
+        <p className="portal-loading">Opening the editor…</p>
+      </main>
+    );
+  }
 
   return (
     <>
