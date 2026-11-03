@@ -176,7 +176,8 @@ export default function SiteEditor() {
   const fields = schema?.fields;
   const fieldMap = useMemo(() => Object.fromEntries((fields || []).map((f) => [f.key, f])), [fields]);
   const builtinGroups = useMemo(() => new Map((schema?.builtins || []).map((b) => [b.group, b.id])), [schema]);
-  const layout = edits.layout ?? schema?.defaultLayout;
+  // A layout saved for an older version of the site's pages is dropped, the same way the site drops it
+  const layout = edits.layout && edits.layout.version === schema?.defaultLayout?.version ? edits.layout : schema?.defaultLayout;
   const page = layout?.pages.find((p) => p.id === pageId) || layout?.pages[0];
 
   useEffect(() => {
